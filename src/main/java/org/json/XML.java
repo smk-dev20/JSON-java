@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Iterator;
+import java.util.Map;
 
 
 /**
@@ -272,9 +273,7 @@ public class XML {
         // <>
         // <=
         // <<
-
         token = x.nextToken();
-
         // <!
 
         if (token == BANG) {
@@ -311,15 +310,14 @@ public class XML {
             } while (i > 0);
             return false;
         } else if (token == QUEST) {
-
             // <?
             x.skipPast("?>");
             return false;
         } else if (token == SLASH) {
 
             // Close tag </
-
             token = x.nextToken();
+
             if (name == null) {
                 throw x.syntaxError("Mismatched close tag " + token);
             }
@@ -368,6 +366,7 @@ public class XML {
                                     config.isKeepStrings()
                                             ? ((String) token)
                                             : stringToValue((String) token));
+
                         }
                         token = null;
                     } else {
@@ -409,7 +408,6 @@ public class XML {
                                             config.isKeepStrings() ? string : stringToValue(string));
                                 }
                             }
-
                         } else if (token == LT) {
                             // Nested element
                             if (parse(x, jsonObject, tagName, config)) {
@@ -421,6 +419,7 @@ public class XML {
                                 } else {
                                     context.accumulate(tagName, jsonObject);
                                 }
+
                                 return false;
                             }
                         }
@@ -431,6 +430,251 @@ public class XML {
             }
         }
     }
+/*
+This is for milestone2
+ */
+    private static boolean found = false;
+    private static int index = -1;
+    private static boolean parsePath(XMLTokener x, JSONObject context, String name, XMLParserConfiguration config, String tokenKey, JSONObject replacement)
+            throws JSONException {
+        char c;
+        int i;
+        JSONObject jsonObject = null;
+        String string;
+        String tagName;
+        Object token;
+        XMLXsiTypeConverter<?> xmlXsiTypeConverter;
+
+        // Test for and skip past these forms:
+        // <!-- ... -->
+        // <! ... >
+        // <![ ... ]]>
+        // <? ... ?>
+        // Report errors for these forms:
+        // <>
+        // <=
+        // <<
+        System.out.println("entered parse "+x.toString()+"name "+name+" found "+found+" index "+index+" context obj "+context.toString());
+        if(found){
+            System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+            if(index > -1){
+              //  do nothing continue parse we still need to get to object in array
+            }else {
+                System.out.println("FINALLY@@@@@@@@@@");
+                if(replacement!=null){
+                 //   context.put(tokenKey,replacement);
+                    //resetting to false to allow for continue in case of task2 milestone2
+                    found = false;
+                   // replacement = null;
+                }
+                else {
+                    return true;
+                }
+
+            }
+        }
+
+        token = x.nextToken();
+        System.out.println("prse token "+token);
+        // <!
+
+        if (token == BANG) {
+            c = x.next();
+            if (c == '-') {
+                if (x.next() == '-') {
+                    x.skipPast("-->");
+                    return false;
+                }
+                x.back();
+            } else if (c == '[') {
+                token = x.nextToken();
+                if ("CDATA".equals(token)) {
+                    if (x.next() == '[') {
+                        string = x.nextCDATA();
+                        if (string.length() > 0) {
+                            context.accumulate(config.getcDataTagName(), string);
+                        }
+                        return false;
+                    }
+                }
+                throw x.syntaxError("Expected 'CDATA['");
+            }
+            i = 1;
+            do {
+                token = x.nextMeta();
+                if (token == null) {
+                    throw x.syntaxError("Missing '>' after '<!'.");
+                } else if (token == LT) {
+                    i += 1;
+                } else if (token == GT) {
+                    i -= 1;
+                }
+            } while (i > 0);
+            return false;
+        } else if (token == QUEST) {
+            System.out.println("found ?");
+            // <?
+            x.skipPast("?>");
+            return false;
+        } else if (token == SLASH) {
+
+            // Close tag </
+            //  System.out.println("Found close tag");
+            token = x.nextToken();
+            System.out.println("closing tag "+(String)token);
+
+            System.out.println("closing context obj");
+            System.out.println(context.toString());
+            System.out.println("*********************");
+            if(tokenKey.equals(token)){
+                found = true;
+                index--;
+                if(replacement==null) {
+                    System.out.println("Going to return");
+                    return true;
+                }
+            }
+            // System.out.println("token "+token);
+
+            if (name == null) {
+                throw x.syntaxError("Mismatched close tag " + token);
+            }
+            if (!token.equals(name)) {
+                throw x.syntaxError("Mismatched " + name + " and " + token);
+            }
+            if (x.nextToken() != GT) {
+                throw x.syntaxError("Misshaped close tag");
+            }
+            return true;
+
+        } else if (token instanceof Character) {
+            throw x.syntaxError("Misshaped tag");
+
+            // Open tag <
+
+        } else {
+
+            tagName = (String) token;
+            if(tagName.equals(tokenKey)){
+                System.out.println("Found our target ");
+                System.out.println("Context Object");
+                System.out.println(context.toString());
+               // return true;
+            }
+             System.out.println("Found tag start "+tagName);
+            token = null;
+            jsonObject = new JSONObject();
+            boolean nilAttributeFound = false;
+            xmlXsiTypeConverter = null;
+              System.out.println("lookinng for its value");
+            for (;;) {
+                  System.out.println("inside first for....................");
+                if (token == null) {
+                    token = x.nextToken();
+                       System.out.println("next tken from tagname base x "+token);
+                }
+                // attribute = value
+                  System.out.println("token we are looking at "+token);
+                if (token instanceof String) {
+                    string = (String) token;
+                       System.out.println("token is string possible key "+string);
+                    token = x.nextToken();
+                        System.out.println("next token shoukd be val "+token);
+                    if (token == EQ) {
+                        token = x.nextToken();
+                        if (!(token instanceof String)) {
+                            throw x.syntaxError("Missing value");
+                        }
+
+                        if (config.isConvertNilAttributeToNull()
+                                && NULL_ATTR.equals(string)
+                                && Boolean.parseBoolean((String) token)) {
+                            nilAttributeFound = true;
+                        } else if(config.getXsiTypeMap() != null && !config.getXsiTypeMap().isEmpty()
+                                && TYPE_ATTR.equals(string)) {
+                            xmlXsiTypeConverter = config.getXsiTypeMap().get(token);
+                        } else if (!nilAttributeFound) {
+                            //     System.out.println("attribute was not nil jsonobj created");
+                            jsonObject.accumulate(string,
+                                    config.isKeepStrings()
+                                            ? ((String) token)
+                                            : stringToValue((String) token));
+
+                            System.out.println("EQ "+jsonObject.toString());
+                        }
+                        token = null;
+                    } else {
+                        jsonObject.accumulate(string, "");
+                    }
+
+
+                } else if (token == SLASH) {
+                    // Empty tag <.../>
+                    if (x.nextToken() != GT) {
+                        throw x.syntaxError("Misshaped tag");
+                    }
+                    if (nilAttributeFound) {
+                        context.accumulate(tagName, JSONObject.NULL);
+                    } else if (jsonObject.length() > 0) {
+                        context.accumulate(tagName, jsonObject);
+                    } else {
+                        context.accumulate(tagName, "");
+                    }
+                    return false;
+
+                } else if (token == GT) {
+                    // Content, between <...> and </...>
+                        System.out.println("token is GT");
+                    for (;;) {
+                        token = x.nextContent();
+                        if (token == null) {
+                            if (tagName != null) {
+                                throw x.syntaxError("Unclosed tag " + tagName);
+                            }
+                                 System.out.println("next token was null return false");
+                            return false;
+                        } else if (token instanceof String) {
+                            string = (String) token;
+                            if (string.length() > 0) {
+                                if(xmlXsiTypeConverter != null) {
+                                    jsonObject.accumulate(config.getcDataTagName(),
+                                            stringToValue(string, xmlXsiTypeConverter));
+                                } else {
+                                    jsonObject.accumulate(config.getcDataTagName(),
+                                            config.isKeepStrings() ? string : stringToValue(string));
+                                }
+                            }
+                                 System.out.println("GT "+jsonObject.toString());
+
+                        } else if (token == LT) {
+                            // Nested element
+                              System.out.println("token lt parse again on nested object - context will be current jobj");
+                            if (parsePath(x, jsonObject, tagName, config,tokenKey, replacement)) {
+                                     System.out.println("inner nested parse is T");
+                                     System.out.println(context.toString());
+                                if (jsonObject.length() == 0) {
+                                    context.accumulate(tagName, "");
+                                } else if (jsonObject.length() == 1
+                                        && jsonObject.opt(config.getcDataTagName()) != null) {
+                                    context.accumulate(tagName, jsonObject.opt(config.getcDataTagName()));
+                                } else {
+                                    context.accumulate(tagName, jsonObject);
+                                }
+
+                                System.out.println("last conrext jobj "+context.toString());
+                                return false;
+                            }
+                        }
+                    }
+                } else {
+                    throw x.syntaxError("Misshaped tag");
+                }
+            }
+        }
+    }
+
+
+
 
     /**
      * This method tries to convert the given string value to the target object
@@ -653,6 +897,113 @@ public class XML {
             x.skipPast("<");
             if(x.more()) {
                 parse(x, jo, null, config);
+            }
+        }
+        return jo;
+    }
+
+    /**
+     * Read an XML file into a JSON object, and extract some smaller sub-object inside,
+     * given a certain path (use JSONPointer). Write that smaller object to disk as a JSON file.
+     * Being this done inside the library, you should be able to do it more efficiently. Specifically,
+     * you shouldn't need to read the entire XML file,
+     * as you can stop parsing it as soon as you find the object in question.
+     * @param reader
+     * @param path
+     * @return
+     */
+  public static JSONObject toJSONObject(Reader reader, JSONPointer path) {
+//
+//        //naive implementation same as in client code whole file was read..point is to parse file only upto path
+//        //JSONObject object = toJSONObject(reader);
+//    //return (JSONObject) path.queryFrom(object);
+      JSONObject jo = new JSONObject();
+      String pointerPath = path.toString();
+      String keyPath[] = path.toString().split("/");
+      String lastKey = keyPath[keyPath.length-1];
+     // int index = -1;
+      String tokenKey = "";
+      if(lastKey.matches("-?\\d+(.\\d+)?")){
+        System.out.println("We are looking at index "+ Integer.parseInt(lastKey)+ " Need to find "+keyPath[keyPath.length-2]);
+        index = Integer.parseInt(lastKey);
+        tokenKey = keyPath[keyPath.length-2];
+        if(index==0){
+            pointerPath = pointerPath.substring(0,pointerPath.lastIndexOf("/"));
+        }
+      }else{
+
+          tokenKey = lastKey;
+      }
+      System.out.println(" Need to find "+tokenKey);
+
+      XMLTokener x = new XMLTokener(reader);
+      System.out.println("tokener*** "+x.toString());
+      StringBuilder sb = new StringBuilder();
+      while (x.more()) {
+          x.skipPast("<");
+          if(x.more()) {
+             // x.skipPast(">");
+            //  System.out.println("going to parse******* x= "+x.toString());
+            //    System.out.println("token = "+x.nextToken());
+              //  System.out.println("content = "+x.nextContent());
+             parsePath(x, jo, null, XMLParserConfiguration.ORIGINAL, tokenKey,null);
+              System.out.println(";;;;;;;;;;;;;");
+          }
+
+      }
+      System.out.println(jo.toString(2));
+      Map<String, Object> map = null;
+      if(lastKey.matches("-?\\d+(.\\d+)?")&& Integer.parseInt(lastKey)!=0) {
+        map = ((JSONObject) path.queryFrom(jo)).toMap();
+
+      }else{
+            JSONPointer newPath = new JSONPointer(pointerPath);
+          map = ((JSONObject) newPath.queryFrom(jo)).toMap();
+
+      }
+//      for(Map.Entry<String, Object> entry : map.entrySet()){
+//          System.out.println(entry.getKey() +" : "+entry.getValue());
+//      }
+      map.remove("content");
+      return new JSONObject(map);
+
+     // return (JSONObject) path.queryFrom(jo);
+
+
+    }
+
+    /**
+     * Read an XML file into a JSON object, replace a sub-object on a certain key path with another JSON object that you construct,
+     * then write the result on disk as a JSON file.
+     * Are there any possible performance gains from doing this inside the library?
+     * If so, implement them in your version of the library.
+     * @param reader
+     * @param path
+     * @param replacement
+     * @return
+     */
+    public static JSONObject toJSONObject(Reader reader, JSONPointer path, JSONObject replacement){
+        JSONObject jo = new JSONObject();
+        XMLTokener x = new XMLTokener(reader);
+        String pointerPath = path.toString();
+        String keyPath[] = path.toString().split("/");
+        String lastKey = keyPath[keyPath.length-1];
+        String tokenKey = "";
+        if(lastKey.matches("-?\\d+(.\\d+)?")){
+            System.out.println("We are looking at index "+ Integer.parseInt(lastKey)+ " Need to find "+keyPath[keyPath.length-2]);
+            index = Integer.parseInt(lastKey);
+            tokenKey = keyPath[keyPath.length-2];
+            if(index==0){
+                pointerPath = pointerPath.substring(0,pointerPath.lastIndexOf("/"));
+            }
+        }else{
+
+            tokenKey = lastKey;
+        }
+        while (x.more()) {
+            x.skipPast("<");
+            if(x.more()) {
+                parsePath(x, jo, null, XMLParserConfiguration.ORIGINAL,tokenKey,replacement);
             }
         }
         return jo;

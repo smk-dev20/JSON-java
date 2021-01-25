@@ -786,6 +786,7 @@ public class XMLTest {
      *            the expected JSON string
      * @throws IOException
      */
+
     private void compareFileToJSONObject(String xmlStr, String expectedStr) {
         try {
             JSONObject expectedJsonObject = new JSONObject(expectedStr);
