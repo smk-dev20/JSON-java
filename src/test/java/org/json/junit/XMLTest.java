@@ -1926,10 +1926,6 @@ public class XMLTest {
         newObject.put("Program", "MSWE");
         newObject.put("Year", 2021);
 
-
-        //pointer path does not exist expecting NULL to be returned
-        //Assert.assertNull(obj);
-
         try {
             JSONObject obj =  XML.toJSONObject(reader,pointer,newObject);
             fail("Expecting a Exception");
