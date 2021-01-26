@@ -509,12 +509,6 @@ public class XML {
 
             // Close tag </
             token = x.nextToken();
-
-            if(tokenKey.equals(token)){
-                found = true;
-                index--;
-                    return true;
-            }
             if (name == null) {
                 throw x.syntaxError("Mismatched close tag " + token);
             }
@@ -523,6 +517,13 @@ public class XML {
             }
             if (x.nextToken() != GT) {
                 throw x.syntaxError("Misshaped close tag");
+            }
+            //found the closing tag of key we are looking for - our needed object is created
+            // update global variables
+            if(tokenKey.equals(token)){
+                found = true;
+                index--;
+                return true;
             }
             return true;
 
@@ -867,6 +868,7 @@ public class XML {
   public static JSONObject toJSONObject(Reader reader, JSONPointer path) {
       JSONObject jo = new JSONObject();
       String pointerPath = path.toString();
+      //determine from JSONPointer path the exact key we need to be looking for
       String keyPath[] = path.toString().split("/");
       String lastKey = keyPath[keyPath.length-1];
 
@@ -881,17 +883,21 @@ public class XML {
           tokenKey = lastKey;
       }
 
+      //parse document until the needed subobject for the specified key is created
       XMLTokener x = new XMLTokener(reader);
 
       while (x.more()) {
           x.skipPast("<");
+          //stop read of document once stopping criteria is reached
           if(x.more() && !found && (index>=-1)) {
              parsePath(x, jo, null, XMLParserConfiguration.ORIGINAL, tokenKey);
           }
       }
-      //reset globals for next test
+      //reset globals for next operation
       found = false;
       index = -1;
+
+      //Use JSONPointer on the returned object to get the exact sub-object for specified path
 
       Map<String, Object> map = null;
       if(lastKey.matches("-?\\d+(.\\d+)?")&& Integer.parseInt(lastKey)!=0) {
@@ -901,6 +907,7 @@ public class XML {
           map = ((JSONObject) newPath.queryFrom(jo)).toMap();
       }
 
+      //remove junk content present due to premature termination of parse
       map.remove("content");
       return new JSONObject(map);
     }
@@ -938,15 +945,20 @@ public class XML {
      * @return
      */
     public static JSONObject toJSONObject(Reader reader, JSONPointer path, JSONObject replacement){
+       //Using JSONPointer obtain the subObject that contains the key to be replaced
         String keyToReplace = path.toString().substring(path.toString().lastIndexOf('/')+1,path.toString().length());
         String pathToObject = path.toString().substring(0,path.toString().lastIndexOf('/'));
 
         Object obj = XML.toJSONObject(reader);
         JSONPointer pointer = new JSONPointer(pathToObject);
         Object subObject =  pointer.queryFrom(obj);
+
+        //if suObject is null indicates that pointer path may be malformed, caller has to handle the case
         if(subObject==null){
             return null;
         }
+        //if subobject is an array the last value in path should be the index within the array to place
+        //new object, if subObject is a JSONObject value of specified key is replaced
             if (subObject instanceof JSONArray) {
                 replaceInArray((JSONArray) pointer.queryFrom(obj), Integer.parseInt(keyToReplace), replacement);
             } else {

@@ -1,0 +1,71 @@
+MSWE 262P Programming Styles - Milestone 2 Project
+Sherlin Mary Koshy (smkoshy)
+
+REQUIREMENTS :
+*Fork the JSON org project in Github (Links to an external site.) and make it "your own."
+*Add an overloaded static method to the XML class with the signature
+static JSONObject toJSONObject(Reader reader, JSONPointer path)
+which does, inside the library, the same thing that task 2 of milestone 1 did in client code, before writing to disk. Being this done inside the library, you should be able to do it more efficiently.
+*Add an overloaded static method to the XML class with the signature
+static JSONObject toJSONObject(Reader reader, JSONPointer path, JSONObject replacement)
+which does, inside the library, the same thing that task 5 of milestone 1 did in client code, before writing to disk.
+*Write unit tests that use these two new functions, both for obtaining correct results and for testing error conditions.
+
+IMPLEMENTATION DETAILS :
+- The required static methods were added into XML class.
+- Code operates on assumption that caller has provided a valid path that terminates in a value that is of type JSONObject
+- A copy of the existing parse method was created called parsePath() which takes an additional parameter
+  called tokenKey which is the key we are looking for in requirement 1. parsePath() also needs two global variables called
+  'found' and 'index' which are needed to determine the point at which parsing is to be stopped.
+- Parse operation is allowed to proceed as before until we encounter the closing tag of the needed key,
+  global variables are updated and in subsequent recursive calls of parsePath() the global
+  variables are checked to determine if parsing should continue or not.
+- On returning from parse, we can apply the JSONPointer on the obtained JSONObject to generate the
+  needed subObject.
+- Two methods replaceInArray() and replace() were added to perform replacement action needed for
+  the second requirement.
+- A total of 10 additional test cases were added into XMLTest to verify functioning of the new methods.
+- Test cases use 3 different input XMLs to test functionality both for correct and error cases.
+- An additional Milestone2_Test class and an XML file in a folder named XML were
+  included in the Test folder to allow for debugging during development.
+
+TESTING THE CODE :
+- Run all tests within XMLTest / run each individual test case as needed.
+- Code within MileStone2_Test can also be run to see the returned objects printed to console.
+  (Ensure that path to the XML file is accurate for system being used.)
+
+BUILDING THE PROJECT :
+- The JSON-java project was launched as a Gradle project in the IDE (IntelliJ).
+- The Build Script provided in the original README file (gradlew clean build test) was run.
+  The generated Gradle Test Report included the 10 added test cases and they were reported as having passed.
+  Resource : https://www.jetbrains.com/help/idea/getting-started-with-gradle.html
+
+FURTHER WORK :
+- Code could be made more robust by adding support for cases where target key value is
+  not a JSONObject or JSONArray. (Constrained by JSONPointer)
+- Since requirement is to stop parse on encountering the needed key and is dependent on the last tokens
+  of the JSONPointer path, the resulting subObject may not be the same as that returned if whole file was parsed.
+  ie., /catalog/books in small1.xml returns the first book value (because we stopped parsing on seeing book)
+  It would have returned an array of values, if the whole file was allowed to be parsed, and since
+  we do not continue to parse we remain unaware that a array would be eventually formed. Could add support
+  for these kinds of cases in the future.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -6,7 +6,7 @@ import org.junit.Test;
 import java.io.*;
 
 /*
-Test helper class for Milestone2
+Test helper class for Milestone2 - prints results to console
  */
 public class Milestone2_Test {
     @Test
@@ -14,7 +14,7 @@ public class Milestone2_Test {
         File file = new File("C:\\Users\\Sherlin\\Desktop\\UCI\\Winter_2021\\262P_Programming_Styles\\JSON-java\\src\\test\\java\\org\\json\\junit\\xmls\\small1.xml");
         FileReader fr = new FileReader(file);
         BufferedReader br = new BufferedReader(fr);
-        JSONPointer pointer = new JSONPointer("/catalog/book/2");
+        JSONPointer pointer = new JSONPointer("/catalog/book/0");
         Object obj = XML.toJSONObject(br,pointer);
          System.out.println("Final "+obj.toString());
     }

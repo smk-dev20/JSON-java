@@ -1064,7 +1064,7 @@ public class XMLTest {
             fail("Expected to be unable to modify the config");
         } catch (Exception ignored) { }
     }
-
+//Added tests for Milestone2
     @Test
     public void testToJSONObjectGetSubObjectSimple(){
         String xmlStr =
