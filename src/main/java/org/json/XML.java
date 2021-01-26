@@ -460,12 +460,13 @@ This is for milestone2
             if(index > -1){
               //  do nothing continue parse we still need to get to object in array
             }else {
-                System.out.println("FINALLY@@@@@@@@@@");
                 if(replacement!=null){
-                 //   context.put(tokenKey,replacement);
+                    System.out.println("FINALLY@@@@@@@@@@");
+                   // context.put(tokenKey,replacement);
                     //resetting to false to allow for continue in case of task2 milestone2
                     found = false;
-                   // replacement = null;
+                    index = -1;
+                    replacement = null;
                 }
                 else {
                     return true;
@@ -532,10 +533,19 @@ This is for milestone2
                 if(replacement==null) {
                     System.out.println("Going to return");
                     return true;
+                }else{
+                    if(index==-1) {
+                       // context.put(tokenKey, replacement);
+                        //context.accumulate(tokenKey,replacement);
+                      //  context = replacement;
+                        //System.out.println("Context after replace "+context.toString());
+
+                    }
+
                 }
             }
             // System.out.println("token "+token);
-
+            System.out.println("Context after replace 7787 "+context.toString());
             if (name == null) {
                 throw x.syntaxError("Mismatched close tag " + token);
             }
@@ -652,6 +662,10 @@ This is for milestone2
                             if (parsePath(x, jsonObject, tagName, config,tokenKey, replacement)) {
                                      System.out.println("inner nested parse is T");
                                      System.out.println(context.toString());
+                                     System.out.println(jsonObject.toString());
+                                     if(replacement!=null && index == -1){
+                                         jsonObject = replacement;
+                                     }
                                 if (jsonObject.length() == 0) {
                                     context.accumulate(tagName, "");
                                 } else if (jsonObject.length() == 1
@@ -941,7 +955,7 @@ This is for milestone2
       StringBuilder sb = new StringBuilder();
       while (x.more()) {
           x.skipPast("<");
-          if(x.more()) {
+          if(x.more() && !found && (index>=-1)) {
              // x.skipPast(">");
             //  System.out.println("going to parse******* x= "+x.toString());
             //    System.out.println("token = "+x.nextToken());
@@ -969,8 +983,28 @@ This is for milestone2
 
      // return (JSONObject) path.queryFrom(jo);
 
-
     }
+    /*
+     * method      : replace
+     * input       : JSONObject - generated from file, String - key whose value should be replaced,
+     * 				 JSONObject - new value for given key
+     * output      : void
+     * desc        : org.json library method used to update value of given key in given object
+     */
+    private static void replace(JSONObject json, String key, JSONObject newValue) {
+        json.put(key,newValue);
+    }//end replace
+
+    /*
+     * method      : replaceInArray
+     * input       : JSONArray - array, Integer - index within array, JSONObject object
+     * output      : void
+     * desc        : org.json library method used to insert given JSONObject
+     * 				 at specified index in array
+     */
+    private static void replaceInArray(JSONArray array, int index, JSONObject json) {
+        array.put(index,json);
+    }//end replaceInArray
 
     /**
      * Read an XML file into a JSON object, replace a sub-object on a certain key path with another JSON object that you construct,
@@ -983,30 +1017,25 @@ This is for milestone2
      * @return
      */
     public static JSONObject toJSONObject(Reader reader, JSONPointer path, JSONObject replacement){
-        JSONObject jo = new JSONObject();
-        XMLTokener x = new XMLTokener(reader);
-        String pointerPath = path.toString();
-        String keyPath[] = path.toString().split("/");
-        String lastKey = keyPath[keyPath.length-1];
-        String tokenKey = "";
-        if(lastKey.matches("-?\\d+(.\\d+)?")){
-            System.out.println("We are looking at index "+ Integer.parseInt(lastKey)+ " Need to find "+keyPath[keyPath.length-2]);
-            index = Integer.parseInt(lastKey);
-            tokenKey = keyPath[keyPath.length-2];
-            if(index==0){
-                pointerPath = pointerPath.substring(0,pointerPath.lastIndexOf("/"));
-            }
-        }else{
+        String keyToReplace = path.toString().substring(path.toString().lastIndexOf('/')+1,path.toString().length());
+        String pathToObject = path.toString().substring(0,path.toString().lastIndexOf('/'));
+        Object obj = XML.toJSONObject(reader);
+        JSONPointer pointer = new JSONPointer(pathToObject);
+        Object subObject =  pointer.queryFrom(obj);
 
-            tokenKey = lastKey;
+        System.out.println(keyToReplace);
+        System.out.println(pathToObject);
+
+        if(subObject instanceof JSONArray) {
+            System.out.println("Sub is array");
+            replaceInArray((JSONArray) pointer.queryFrom(obj), Integer.parseInt(keyToReplace), replacement);
         }
-        while (x.more()) {
-            x.skipPast("<");
-            if(x.more()) {
-                parsePath(x, jo, null, XMLParserConfiguration.ORIGINAL,tokenKey,replacement);
-            }
+            else {
+            System.out.println("Sub is object");
+            replace((JSONObject) pointer.queryFrom(obj), keyToReplace, replacement);
         }
-        return jo;
+
+        return (JSONObject) obj;
     }
 
     /**

@@ -7,29 +7,20 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-
-public class Milestone2_Task2_Test {
-  /*  public static void main(String[] args) throws FileNotFoundException {
-        File file = new File("C:\\Users\\Sherlin\\Desktop\\UCI\\Winter_2021\\262P_Programming_Styles\\JSON-java\\src\\test\\java\\org\\json\\junit\\xmls\\small1.xml");
-        FileReader fr = new FileReader(file);
-        BufferedReader br = new BufferedReader(fr);
-
-        JSONObject obj = XML.toJSONObject(br);
-
-       // System.out.println(obj.toString(2));
-    }*/
-
+/*
+Test helper class for Milestone2
+ */
+public class Milestone2_Test {
     @Test
     public void testTask2() throws FileNotFoundException {
         File file = new File("C:\\Users\\Sherlin\\Desktop\\UCI\\Winter_2021\\262P_Programming_Styles\\JSON-java\\src\\test\\java\\org\\json\\junit\\xmls\\small1.xml");
         FileReader fr = new FileReader(file);
         BufferedReader br = new BufferedReader(fr);
-        JSONPointer pointer = new JSONPointer("/catalog");
+        JSONPointer pointer = new JSONPointer("/catalog/book/2");
         Object obj = XML.toJSONObject(br,pointer);
          System.out.println("Final "+obj.toString());
     }
-//test diff xml // diff json paths
-    //stuff you tested
+
     @Test
     public void testTask5() throws FileNotFoundException {
         JSONObject newObject = new JSONObject();
@@ -41,9 +32,9 @@ public class Milestone2_Task2_Test {
         File file = new File("C:\\Users\\Sherlin\\Desktop\\UCI\\Winter_2021\\262P_Programming_Styles\\JSON-java\\src\\test\\java\\org\\json\\junit\\xmls\\small1.xml");
         FileReader fr = new FileReader(file);
         BufferedReader br = new BufferedReader(fr);
-        JSONPointer pointer = new JSONPointer("/catalog/book/0");
-        Object obj = XML.toJSONObject(br,pointer, newObject);
-        System.out.println("Final "+obj.toString());
+        JSONPointer pointer = new JSONPointer("/catalog/book/2/title");
+        JSONObject obj = XML.toJSONObject(br,pointer, newObject);
+        System.out.println("Final "+obj.toString(2));
 
     }
 }
