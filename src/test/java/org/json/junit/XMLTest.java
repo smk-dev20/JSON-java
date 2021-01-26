@@ -41,13 +41,8 @@ import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-import org.json.XML;
-import org.json.XMLParserConfiguration;
-import org.json.XMLXsiTypeConverter;
+import org.json.*;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -1068,5 +1063,949 @@ public class XMLTest {
             });
             fail("Expected to be unable to modify the config");
         } catch (Exception ignored) { }
+    }
+
+    @Test
+    public void testToJSONObjectGetSubObjectSimple(){
+        String xmlStr =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"+
+                        "<addresses xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""+
+                        "   xsi:noNamespaceSchemaLocation='test.xsd'>\n"+
+                        "   <address>\n"+
+                        "       <name>Joe Tester</name>\n"+
+                        "       <street>[CDATA[Baker street 5]</street>\n"+
+                        "       <NothingHere/>\n"+
+                        "       <TrueValue>true</TrueValue>\n"+
+                        "       <FalseValue>false</FalseValue>\n"+
+                        "       <NullValue>null</NullValue>\n"+
+                        "       <PositiveValue>42</PositiveValue>\n"+
+                        "       <NegativeValue>-23</NegativeValue>\n"+
+                        "       <DoubleValue>-23.45</DoubleValue>\n"+
+                        "       <Nan>-23x.45</Nan>\n"+
+                        "       <ArrayOfNum>1, 2, 3, 4.1, 5.2</ArrayOfNum>\n"+
+                        "   </address>\n"+
+                        "</addresses>";
+        Reader reader = new StringReader(xmlStr);
+        JSONPointer pointer = new JSONPointer("/addresses/address");
+
+        String expectedJsonString = "{\"ArrayOfNum\":\"1, 2, 3, 4.1, 5.2\",\"TrueValue\":true,\"DoubleValue\":-23.45,\"street\":\"[CDATA[Baker street 5]\",\"NegativeValue\":-23,\"name\":\"Joe Tester\",\"NothingHere\":\"\",\"Nan\":\"-23x.45\",\"PositiveValue\":42,\"FalseValue\":false}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+       JSONObject actualJson = XML.toJSONObject(reader,pointer);
+      Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testToJSONObjectGetSubObjectNested(){
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);
+        JSONPointer pointer = new JSONPointer("/clinical_study/sponsors/lead_sponsor");
+        String expectedJsonString = "{\"agency\": \"NYU Langone Health\", \"agency_class\": \"Other\"}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+        JSONObject actualJson = XML.toJSONObject(xmlReader,pointer);
+        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testToJSONObjectGetSubObjectAtIndex(){
+        String xmlStr =
+                "<?xml version=\"1.0\"?>\n" +
+                        "<catalog>\n" +
+                        "   <book id=\"bk101\">\n" +
+                        "      <author>Gambardella, Matthew</author>\n" +
+                        "      <title>XML Developer's Guide</title>\n" +
+                        "      <genre>Computer</genre>\n" +
+                        "      <price>44.95</price>\n" +
+                        "      <publish_date>2000-10-01</publish_date>\n" +
+                        "      <description>An in-depth look at creating applications \n" +
+                        "      with XML.</description>\n" +
+                        "   </book>\n" +
+                        "   <book id=\"bk102\">\n" +
+                        "      <author>Ralls, Kim</author>\n" +
+                        "      <title>Midnight Rain</title>\n" +
+                        "      <genre>Fantasy</genre>\n" +
+                        "      <price>5.95</price>\n" +
+                        "      <publish_date>2000-12-16</publish_date>\n" +
+                        "      <description>A former architect battles corporate zombies, \n" +
+                        "      an evil sorceress, and her own childhood to become queen \n" +
+                        "      of the world.</description>\n" +
+                        "   </book>\n" +
+                        "   <book id=\"bk103\">\n" +
+                        "      <author>Corets, Eva</author>\n" +
+                        "      <title>Maeve Ascendant</title>\n" +
+                        "      <genre>Fantasy</genre>\n" +
+                        "      <price>5.95</price>\n" +
+                        "      <publish_date>2000-11-17</publish_date>\n" +
+                        "      <description>After the collapse of a nanotechnology \n" +
+                        "      society in England, the young survivors lay the \n" +
+                        "      foundation for a new society.</description>\n" +
+                        "   </book>\n" +
+                        "   <book id=\"bk104\">\n" +
+                        "      <author>Corets, Eva</author>\n" +
+                        "      <title>Oberon's Legacy</title>\n" +
+                        "      <genre>Fantasy</genre>\n" +
+                        "      <price>5.95</price>\n" +
+                        "      <publish_date>2001-03-10</publish_date>\n" +
+                        "      <description>In post-apocalypse England, the mysterious \n" +
+                        "      agent known only as Oberon helps to create a new life \n" +
+                        "      for the inhabitants of London. Sequel to Maeve \n" +
+                        "      Ascendant.</description>\n" +
+                        "   </book>\n" +
+                        "   <book id=\"bk105\">\n" +
+                        "      <author>Corets, Eva</author>\n" +
+                        "      <title>The Sundered Grail</title>\n" +
+                        "      <genre>Fantasy</genre>\n" +
+                        "      <price>5.95</price>\n" +
+                        "      <publish_date>2001-09-10</publish_date>\n" +
+                        "      <description>The two daughters of Maeve, half-sisters, \n" +
+                        "      battle one another for control of England. Sequel to \n" +
+                        "      Oberon's Legacy.</description>\n" +
+                        "   </book>\n"+
+                        "</catalog>";
+        JSONPointer pointer = new JSONPointer("/catalog/book/2");
+        Reader reader = new StringReader(xmlStr);
+        String expectedJsonString = "{  \"author\": \"Corets, Eva\",\n" +
+                "  \"price\": 5.95,\n" +
+                "  \"genre\": \"Fantasy\",\n" +
+                "  \"description\": \"After the collapse of a nanotechnology \\n      society in England, the young survivors lay the \\n      foundation for a new society.\",\n" +
+                "  \"id\": \"bk103\",\n" +
+                "  \"title\": \"Maeve Ascendant\",\n" +
+                "  \"publish_date\": \"2000-11-17\"}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+        JSONObject actualJson = XML.toJSONObject(reader,pointer);
+        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testToJSONObjectReplaceSimple(){
+        String xmlStr =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"+
+                        "<addresses xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""+
+                        "   xsi:noNamespaceSchemaLocation='test.xsd'>\n"+
+                        "   <address>\n"+
+                        "       <name>Joe Tester</name>\n"+
+                        "       <street>[CDATA[Baker street 5]</street>\n"+
+                        "       <NothingHere/>\n"+
+                        "       <TrueValue>true</TrueValue>\n"+
+                        "       <FalseValue>false</FalseValue>\n"+
+                        "       <NullValue>null</NullValue>\n"+
+                        "       <PositiveValue>42</PositiveValue>\n"+
+                        "       <NegativeValue>-23</NegativeValue>\n"+
+                        "       <DoubleValue>-23.45</DoubleValue>\n"+
+                        "       <Nan>-23x.45</Nan>\n"+
+                        "       <ArrayOfNum>1, 2, 3, 4.1, 5.2</ArrayOfNum>\n"+
+                        "   </address>\n"+
+                        "</addresses>";
+        Reader reader = new StringReader(xmlStr);
+        JSONPointer pointer = new JSONPointer("/addresses/address");
+
+        JSONObject newObject = new JSONObject();
+        newObject.put("University", "UCI");
+        newObject.put("School", "ICS");
+        newObject.put("Program", "MSWE");
+        newObject.put("Year", 2021);
+
+        String expectedJsonString = "{\"addresses\":{\"address\":{\"School\":\"ICS\",\"Program\":\"MSWE\",\"University\":\"UCI\",\"Year\":2021}," +
+                "\"xsi:noNamespaceSchemaLocation\":\"test.xsd\",\"xmlns:xsi\":\"http://www.w3.org/2001/XMLSchema-instance\"}}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+        JSONObject actualJson = XML.toJSONObject(reader,pointer,newObject);
+        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testToJSONObjectReplaceNested(){
+        JSONObject newObject = new JSONObject();
+        newObject.put("University", "UCI");
+        newObject.put("School", "ICS");
+        newObject.put("Program", "MSWE");
+        newObject.put("Year", 2021);
+
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);
+        JSONPointer pointer = new JSONPointer("/clinical_study/eligibility/study_pop/textblock");
+
+        String expectedJsonString = "{\"clinical_study\": {\n" +
+                "  \"brief_summary\": {\"textblock\": \"CLEAR SYNERGY is an international multi center 2x2 randomized placebo controlled trial of\"},\n" +
+                "  \"brief_title\": \"CLEAR SYNERGY Neutrophil Substudy\",\n" +
+                "  \"overall_status\": \"Recruiting\",\n" +
+                "  \"eligibility\": {\n" +
+                "    \"study_pop\": {\"textblock\": {\n" +
+                "      \"School\": \"ICS\",\n" +
+                "      \"Program\": \"MSWE\",\n" +
+                "      \"University\": \"UCI\",\n" +
+                "      \"Year\": 2021\n" +
+                "    }},\n" +
+                "    \"minimum_age\": \"19 Years\",\n" +
+                "    \"sampling_method\": \"Non-Probability Sample\",\n" +
+                "    \"gender\": \"All\",\n" +
+                "    \"criteria\": {\"textblock\": \"Inclusion Criteria:\"},\n" +
+                "    \"healthy_volunteers\": \"No\",\n" +
+                "    \"maximum_age\": \"110 Years\"\n" +
+                "  },\n" +
+                "  \"number_of_groups\": 2,\n" +
+                "  \"source\": \"NYU Langone Health\",\n" +
+                "  \"location_countries\": {\"country\": \"United States\"},\n" +
+                "  \"study_design_info\": {\n" +
+                "    \"time_perspective\": \"Prospective\",\n" +
+                "    \"observational_model\": \"Other\"\n" +
+                "  },\n" +
+                "  \"last_update_submitted_qc\": \"September 10, 2019\",\n" +
+                "  \"intervention_browse\": {\"mesh_term\": \"Colchicine\"},\n" +
+                "  \"official_title\": \"Studies on the Effects of Colchicine on Neutrophil Biology in Acute Myocardial Infarction: A Substudy of the CLEAR SYNERGY (OASIS 9) Trial\",\n" +
+                "  \"primary_completion_date\": {\n" +
+                "    \"type\": \"Anticipated\",\n" +
+                "    \"content\": \"February 1, 2021\"\n" +
+                "  },\n" +
+                "  \"sponsors\": {\n" +
+                "    \"lead_sponsor\": {\n" +
+                "      \"agency_class\": \"Other\",\n" +
+                "      \"agency\": \"NYU Langone Health\"\n" +
+                "    },\n" +
+                "    \"collaborator\": [\n" +
+                "      {\n" +
+                "        \"agency_class\": \"Other\",\n" +
+                "        \"agency\": \"Population Health Research Institute\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "        \"agency_class\": \"NIH\",\n" +
+                "        \"agency\": \"National Heart, Lung, and Blood Institute (NHLBI)\"\n" +
+                "      }\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  \"overall_official\": {\n" +
+                "    \"role\": \"Principal Investigator\",\n" +
+                "    \"affiliation\": \"NYU School of Medicine\",\n" +
+                "    \"last_name\": \"Binita Shah, MD\"\n" +
+                "  },\n" +
+                "  \"overall_contact_backup\": {\"last_name\": \"Binita Shah, MD\"},\n" +
+                "  \"condition_browse\": {\"mesh_term\": [\n" +
+                "    \"Myocardial Infarction\",\n" +
+                "    \"ST Elevation Myocardial Infarction\",\n" +
+                "    \"Infarction\"\n" +
+                "  ]},\n" +
+                "  \"overall_contact\": {\n" +
+                "    \"phone\": \"646-501-9648\",\n" +
+                "    \"last_name\": \"Fatmira Curovic\",\n" +
+                "    \"email\": \"fatmira.curovic@nyumc.org\"\n" +
+                "  },\n" +
+                "  \"responsible_party\": {\n" +
+                "    \"responsible_party_type\": \"Principal Investigator\",\n" +
+                "    \"investigator_title\": \"Assistant Professor of Medicine\",\n" +
+                "    \"investigator_full_name\": \"Binita Shah\",\n" +
+                "    \"investigator_affiliation\": \"NYU Langone Health\"\n" +
+                "  },\n" +
+                "  \"study_first_submitted_qc\": \"March 12, 2019\",\n" +
+                "  \"start_date\": {\n" +
+                "    \"type\": \"Actual\",\n" +
+                "    \"content\": \"March 4, 2019\"\n" +
+                "  },\n" +
+                "  \"has_expanded_access\": \"No\",\n" +
+                "  \"study_first_posted\": {\n" +
+                "    \"type\": \"Actual\",\n" +
+                "    \"content\": \"March 14, 2019\"\n" +
+                "  },\n" +
+                "  \"arm_group\": [\n" +
+                "    {\"arm_group_label\": \"Colchicine\"},\n" +
+                "    {\"arm_group_label\": \"Placebo\"}\n" +
+                "  ],\n" +
+                "  \"primary_outcome\": {\n" +
+                "    \"measure\": \"soluble L-selectin\",\n" +
+                "    \"time_frame\": \"between baseline and 3 months\",\n" +
+                "    \"description\": \"Change in soluble L-selectin between baseline and 3 mo after STEMI in the placebo vs. colchicine groups.\"\n" +
+                "  },\n" +
+                "  \"secondary_outcome\": [\n" +
+                "    {\n" +
+                "      \"measure\": \"Other soluble markers of neutrophil activity\",\n" +
+                "      \"time_frame\": \"between baseline and 3 months\",\n" +
+                "      \"description\": \"Other markers of neutrophil activity will be evaluated at baseline and 3 months after STEMI (myeloperoxidase, matrix metalloproteinase-9, neutrophil gelatinase-associated lipocalin, neutrophil elastase, intercellular/vascular cellular adhesion molecules)\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"measure\": \"Markers of systemic inflammation\",\n" +
+                "      \"time_frame\": \"between baseline and 3 months\",\n" +
+                "      \"description\": \"Markers of systemic inflammation will be evaluated at baseline and 3 months after STEMI (high sensitive CRP, IL-1β)\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"measure\": \"Neutrophil-driven responses that may further propagate injury\",\n" +
+                "      \"time_frame\": \"between baseline and 3 months\",\n" +
+                "      \"description\": \"Neutrophil-driven responses that may further propagate injury will be evaluated at baseline and 3 months after STEMI (neutrophil extracellular traps, neutrophil-derived microparticles)\"\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"oversight_info\": {\n" +
+                "    \"is_fda_regulated_drug\": \"No\",\n" +
+                "    \"is_fda_regulated_device\": \"No\",\n" +
+                "    \"has_dmc\": \"No\"\n" +
+                "  },\n" +
+                "  \"last_update_posted\": {\n" +
+                "    \"type\": \"Actual\",\n" +
+                "    \"content\": \"September 12, 2019\"\n" +
+                "  },\n" +
+                "  \"id_info\": {\n" +
+                "    \"nct_id\": \"NCT03874338\",\n" +
+                "    \"org_study_id\": \"18-01323\",\n" +
+                "    \"secondary_id\": \"1R01HL146206\"\n" +
+                "  },\n" +
+                "  \"enrollment\": {\n" +
+                "    \"type\": \"Anticipated\",\n" +
+                "    \"content\": 670\n" +
+                "  },\n" +
+                "  \"study_first_submitted\": \"March 12, 2019\",\n" +
+                "  \"condition\": [\n" +
+                "    \"Neutrophils.Hypersegmented | Bld-Ser-Plas\",\n" +
+                "    \"STEMI - ST Elevation Myocardial Infarction\"\n" +
+                "  ],\n" +
+                "  \"study_type\": \"Observational\",\n" +
+                "  \"required_header\": {\n" +
+                "    \"download_date\": \"ClinicalTrials.gov processed this data on July 19, 2020\",\n" +
+                "    \"link_text\": \"Link to the current ClinicalTrials.gov record.\",\n" +
+                "    \"url\": \"https://clinicaltrials.gov/show/NCT03874338\"\n" +
+                "  },\n" +
+                "  \"last_update_submitted\": \"September 10, 2019\",\n" +
+                "  \"completion_date\": {\n" +
+                "    \"type\": \"Anticipated\",\n" +
+                "    \"content\": \"February 1, 2022\"\n" +
+                "  },\n" +
+                "  \"location\": {\n" +
+                "    \"contact\": {\n" +
+                "      \"phone\": \"646-501-9648\",\n" +
+                "      \"last_name\": \"Fatmira Curovic\",\n" +
+                "      \"email\": \"fatmira.curovic@nyumc.org\"\n" +
+                "    },\n" +
+                "    \"facility\": {\n" +
+                "      \"address\": {\n" +
+                "        \"zip\": 10016,\n" +
+                "        \"country\": \"United States\",\n" +
+                "        \"city\": \"New York\",\n" +
+                "        \"state\": \"New York\"\n" +
+                "      },\n" +
+                "      \"name\": \"NYU School of Medicine\"\n" +
+                "    },\n" +
+                "    \"status\": \"Recruiting\",\n" +
+                "    \"contact_backup\": {\"last_name\": \"Binita Shah, MD\"}\n" +
+                "  },\n" +
+                "  \"intervention\": {\n" +
+                "    \"intervention_type\": \"Drug\",\n" +
+                "    \"arm_group_label\": [\n" +
+                "      \"Colchicine\",\n" +
+                "      \"Placebo\"\n" +
+                "    ],\n" +
+                "    \"description\": \"Participants in the main CLEAR SYNERGY trial are randomized to colchicine/spironolactone versus placebo in a 2x2 factorial design. The substudy is interested in the evaluation of biospecimens obtained from patients in the colchicine vs placebo group.\",\n" +
+                "    \"intervention_name\": \"Colchicine Pill\"\n" +
+                "  },\n" +
+                "  \"patient_data\": {\"sharing_ipd\": \"No\"},\n" +
+                "  \"verification_date\": \"September 2019\"\n" +
+                "}}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+        JSONObject actualJson = XML.toJSONObject(xmlReader,pointer,newObject);
+        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+
+    }
+
+    @Test
+    public void testToJSONObjectReplaceAtIndex(){
+        String xmlStr = "<?xml version=\"1.0\"?>\n" +
+                "<catalog>\n" +
+                "   <book id=\"bk101\">\n" +
+                "      <author>Gambardella, Matthew</author>\n" +
+                "      <title>XML Developer's Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>44.95</price>\n" +
+                "      <publish_date>2000-10-01</publish_date>\n" +
+                "      <description>An in-depth look at creating applications \n" +
+                "      with XML.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk102\">\n" +
+                "      <author>Ralls, Kim</author>\n" +
+                "      <title>Midnight Rain</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-12-16</publish_date>\n" +
+                "      <description>A former architect battles corporate zombies, \n" +
+                "      an evil sorceress, and her own childhood to become queen \n" +
+                "      of the world.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk103\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Maeve Ascendant</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-11-17</publish_date>\n" +
+                "      <description>After the collapse of a nanotechnology \n" +
+                "      society in England, the young survivors lay the \n" +
+                "      foundation for a new society.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk104\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Oberon's Legacy</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-03-10</publish_date>\n" +
+                "      <description>In post-apocalypse England, the mysterious \n" +
+                "      agent known only as Oberon helps to create a new life \n" +
+                "      for the inhabitants of London. Sequel to Maeve \n" +
+                "      Ascendant.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk105\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>The Sundered Grail</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-09-10</publish_date>\n" +
+                "      <description>The two daughters of Maeve, half-sisters, \n" +
+                "      battle one another for control of England. Sequel to \n" +
+                "      Oberon's Legacy.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk106\">\n" +
+                "      <author>Randall, Cynthia</author>\n" +
+                "      <title>Lover Birds</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-09-02</publish_date>\n" +
+                "      <description>When Carla meets Paul at an ornithology \n" +
+                "      conference, tempers fly as feathers get ruffled.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk107\">\n" +
+                "      <author>Thurman, Paula</author>\n" +
+                "      <title>Splish Splash</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>A deep sea diver finds true love twenty \n" +
+                "      thousand leagues beneath the sea.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk108\">\n" +
+                "      <author>Knorr, Stefan</author>\n" +
+                "      <title>Creepy Crawlies</title>\n" +
+                "      <genre>Horror</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-12-06</publish_date>\n" +
+                "      <description>An anthology of horror stories about roaches,\n" +
+                "      centipedes, scorpions  and other insects.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk109\">\n" +
+                "      <author>Kress, Peter</author>\n" +
+                "      <title>Paradox Lost</title>\n" +
+                "      <genre>Science Fiction</genre>\n" +
+                "      <price>6.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>After an inadvertant trip through a Heisenberg\n" +
+                "      Uncertainty Device, James Salway discovers the problems \n" +
+                "      of being quantum.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk110\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>Microsoft .NET: The Programming Bible</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-09</publish_date>\n" +
+                "      <description>Microsoft's .NET initiative is explored in \n" +
+                "      detail in this deep programmer's reference.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk111\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>MSXML3: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-01</publish_date>\n" +
+                "      <description>The Microsoft MSXML3 parser is covered in \n" +
+                "      detail, with attention to XML DOM interfaces, XSLT processing, \n" +
+                "      SAX and more.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk112\">\n" +
+                "      <author>Galos, Mike</author>\n" +
+                "      <title>Visual Studio 7: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>49.95</price>\n" +
+                "      <publish_date>2001-04-16</publish_date>\n" +
+                "      <description>Microsoft Visual Studio 7 is explored in depth,\n" +
+                "      looking at how Visual Basic, Visual C++, C#, and ASP+ are \n" +
+                "      integrated into a comprehensive development \n" +
+                "      environment.</description>\n" +
+                "   </book>\n" +
+                "</catalog>";
+        Reader reader = new StringReader(xmlStr);
+        JSONPointer pointer = new JSONPointer("/catalog/book/0");
+
+        JSONObject newObject = new JSONObject();
+        newObject.put("University", "UCI");
+        newObject.put("School", "ICS");
+        newObject.put("Program", "MSWE");
+        newObject.put("Year", 2021);
+
+        String expectedJsonString = "{\"catalog\": {\"book\": [\n" +
+                "  {\n" +
+                "    \"School\": \"ICS\",\n" +
+                "    \"Program\": \"MSWE\",\n" +
+                "    \"University\": \"UCI\",\n" +
+                "    \"Year\": 2021\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Ralls, Kim\",\n" +
+                "    \"price\": 5.95,\n" +
+                "    \"genre\": \"Fantasy\",\n" +
+                "    \"description\": \"A former architect battles corporate zombies, \\n      an evil sorceress, and her own childhood to become queen \\n      of the world.\",\n" +
+                "    \"id\": \"bk102\",\n" +
+                "    \"title\": \"Midnight Rain\",\n" +
+                "    \"publish_date\": \"2000-12-16\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Corets, Eva\",\n" +
+                "    \"price\": 5.95,\n" +
+                "    \"genre\": \"Fantasy\",\n" +
+                "    \"description\": \"After the collapse of a nanotechnology \\n      society in England, the young survivors lay the \\n      foundation for a new society.\",\n" +
+                "    \"id\": \"bk103\",\n" +
+                "    \"title\": \"Maeve Ascendant\",\n" +
+                "    \"publish_date\": \"2000-11-17\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Corets, Eva\",\n" +
+                "    \"price\": 5.95,\n" +
+                "    \"genre\": \"Fantasy\",\n" +
+                "    \"description\": \"In post-apocalypse England, the mysterious \\n      agent known only as Oberon helps to create a new life \\n      for the inhabitants of London. Sequel to Maeve \\n      Ascendant.\",\n" +
+                "    \"id\": \"bk104\",\n" +
+                "    \"title\": \"Oberon's Legacy\",\n" +
+                "    \"publish_date\": \"2001-03-10\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Corets, Eva\",\n" +
+                "    \"price\": 5.95,\n" +
+                "    \"genre\": \"Fantasy\",\n" +
+                "    \"description\": \"The two daughters of Maeve, half-sisters, \\n      battle one another for control of England. Sequel to \\n      Oberon's Legacy.\",\n" +
+                "    \"id\": \"bk105\",\n" +
+                "    \"title\": \"The Sundered Grail\",\n" +
+                "    \"publish_date\": \"2001-09-10\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Randall, Cynthia\",\n" +
+                "    \"price\": 4.95,\n" +
+                "    \"genre\": \"Romance\",\n" +
+                "    \"description\": \"When Carla meets Paul at an ornithology \\n      conference, tempers fly as feathers get ruffled.\",\n" +
+                "    \"id\": \"bk106\",\n" +
+                "    \"title\": \"Lover Birds\",\n" +
+                "    \"publish_date\": \"2000-09-02\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Thurman, Paula\",\n" +
+                "    \"price\": 4.95,\n" +
+                "    \"genre\": \"Romance\",\n" +
+                "    \"description\": \"A deep sea diver finds true love twenty \\n      thousand leagues beneath the sea.\",\n" +
+                "    \"id\": \"bk107\",\n" +
+                "    \"title\": \"Splish Splash\",\n" +
+                "    \"publish_date\": \"2000-11-02\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Knorr, Stefan\",\n" +
+                "    \"price\": 4.95,\n" +
+                "    \"genre\": \"Horror\",\n" +
+                "    \"description\": \"An anthology of horror stories about roaches,\\n      centipedes, scorpions  and other insects.\",\n" +
+                "    \"id\": \"bk108\",\n" +
+                "    \"title\": \"Creepy Crawlies\",\n" +
+                "    \"publish_date\": \"2000-12-06\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Kress, Peter\",\n" +
+                "    \"price\": 6.95,\n" +
+                "    \"genre\": \"Science Fiction\",\n" +
+                "    \"description\": \"After an inadvertant trip through a Heisenberg\\n      Uncertainty Device, James Salway discovers the problems \\n      of being quantum.\",\n" +
+                "    \"id\": \"bk109\",\n" +
+                "    \"title\": \"Paradox Lost\",\n" +
+                "    \"publish_date\": \"2000-11-02\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"O'Brien, Tim\",\n" +
+                "    \"price\": 36.95,\n" +
+                "    \"genre\": \"Computer\",\n" +
+                "    \"description\": \"Microsoft's .NET initiative is explored in \\n      detail in this deep programmer's reference.\",\n" +
+                "    \"id\": \"bk110\",\n" +
+                "    \"title\": \"Microsoft .NET: The Programming Bible\",\n" +
+                "    \"publish_date\": \"2000-12-09\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"O'Brien, Tim\",\n" +
+                "    \"price\": 36.95,\n" +
+                "    \"genre\": \"Computer\",\n" +
+                "    \"description\": \"The Microsoft MSXML3 parser is covered in \\n      detail, with attention to XML DOM interfaces, XSLT processing, \\n      SAX and more.\",\n" +
+                "    \"id\": \"bk111\",\n" +
+                "    \"title\": \"MSXML3: A Comprehensive Guide\",\n" +
+                "    \"publish_date\": \"2000-12-01\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"author\": \"Galos, Mike\",\n" +
+                "    \"price\": 49.95,\n" +
+                "    \"genre\": \"Computer\",\n" +
+                "    \"description\": \"Microsoft Visual Studio 7 is explored in depth,\\n      looking at how Visual Basic, Visual C++, C#, and ASP+ are \\n      integrated into a comprehensive development \\n      environment.\",\n" +
+                "    \"id\": \"bk112\",\n" +
+                "    \"title\": \"Visual Studio 7: A Comprehensive Guide\",\n" +
+                "    \"publish_date\": \"2001-04-16\"\n" +
+                "  }\n" +
+                "]}}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+        JSONObject actualJson = XML.toJSONObject(reader,pointer,newObject);
+      Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testToJSONObjectGetSubObjectCastException(){
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);
+        JSONPointer pointer = new JSONPointer("/clinical_study/sponsors/lead_sponsor/agency");
+
+        try {
+            XML.toJSONObject(xmlReader,pointer);
+            fail("Expecting a Exception because value at keyPath is String and not JSONObject");
+        } catch (ClassCastException e) {
+            assertEquals("Expecting an exception message",
+                    "class java.lang.String cannot be cast to class org.json.JSONObject (java.lang.String is in module java.base of loader 'bootstrap'; org.json.JSONObject is in unnamed module of loader 'app')",
+                    e.getMessage());
+        }
+    }
+
+    @Test
+    public void testToJSONObjectReplaceException(){
+        String xmlStr = "<?xml version=\"1.0\"?>\n" +
+                "<catalog>\n" +
+                "   <book id=\"bk101\">\n" +
+                "      <author>Gambardella, Matthew</author>\n" +
+                "      <title>XML Developer's Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>44.95</price>\n" +
+                "      <publish_date>2000-10-01</publish_date>\n" +
+                "      <description>An in-depth look at creating applications \n" +
+                "      with XML.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk102\">\n" +
+                "      <author>Ralls, Kim</author>\n" +
+                "      <title>Midnight Rain</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-12-16</publish_date>\n" +
+                "      <description>A former architect battles corporate zombies, \n" +
+                "      an evil sorceress, and her own childhood to become queen \n" +
+                "      of the world.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk103\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Maeve Ascendant</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-11-17</publish_date>\n" +
+                "      <description>After the collapse of a nanotechnology \n" +
+                "      society in England, the young survivors lay the \n" +
+                "      foundation for a new society.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk104\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Oberon's Legacy</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-03-10</publish_date>\n" +
+                "      <description>In post-apocalypse England, the mysterious \n" +
+                "      agent known only as Oberon helps to create a new life \n" +
+                "      for the inhabitants of London. Sequel to Maeve \n" +
+                "      Ascendant.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk105\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>The Sundered Grail</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-09-10</publish_date>\n" +
+                "      <description>The two daughters of Maeve, half-sisters, \n" +
+                "      battle one another for control of England. Sequel to \n" +
+                "      Oberon's Legacy.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk106\">\n" +
+                "      <author>Randall, Cynthia</author>\n" +
+                "      <title>Lover Birds</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-09-02</publish_date>\n" +
+                "      <description>When Carla meets Paul at an ornithology \n" +
+                "      conference, tempers fly as feathers get ruffled.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk107\">\n" +
+                "      <author>Thurman, Paula</author>\n" +
+                "      <title>Splish Splash</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>A deep sea diver finds true love twenty \n" +
+                "      thousand leagues beneath the sea.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk108\">\n" +
+                "      <author>Knorr, Stefan</author>\n" +
+                "      <title>Creepy Crawlies</title>\n" +
+                "      <genre>Horror</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-12-06</publish_date>\n" +
+                "      <description>An anthology of horror stories about roaches,\n" +
+                "      centipedes, scorpions  and other insects.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk109\">\n" +
+                "      <author>Kress, Peter</author>\n" +
+                "      <title>Paradox Lost</title>\n" +
+                "      <genre>Science Fiction</genre>\n" +
+                "      <price>6.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>After an inadvertant trip through a Heisenberg\n" +
+                "      Uncertainty Device, James Salway discovers the problems \n" +
+                "      of being quantum.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk110\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>Microsoft .NET: The Programming Bible</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-09</publish_date>\n" +
+                "      <description>Microsoft's .NET initiative is explored in \n" +
+                "      detail in this deep programmer's reference.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk111\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>MSXML3: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-01</publish_date>\n" +
+                "      <description>The Microsoft MSXML3 parser is covered in \n" +
+                "      detail, with attention to XML DOM interfaces, XSLT processing, \n" +
+                "      SAX and more.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk112\">\n" +
+                "      <author>Galos, Mike</author>\n" +
+                "      <title>Visual Studio 7: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>49.95</price>\n" +
+                "      <publish_date>2001-04-16</publish_date>\n" +
+                "      <description>Microsoft Visual Studio 7 is explored in depth,\n" +
+                "      looking at how Visual Basic, Visual C++, C#, and ASP+ are \n" +
+                "      integrated into a comprehensive development \n" +
+                "      environment.</description>\n" +
+                "   </book>\n" +
+                "</catalog>";
+        Reader reader = new StringReader(xmlStr);
+        JSONPointer pointer = new JSONPointer("/catalog/nosuchkey/1");
+
+        JSONObject newObject = new JSONObject();
+        newObject.put("University", "UCI");
+        newObject.put("School", "ICS");
+        newObject.put("Program", "MSWE");
+        newObject.put("Year", 2021);
+
+          JSONObject obj =  XML.toJSONObject(reader,pointer,newObject);
+          //pointer path does not exist expecting NULL to be returned
+          Assert.assertNull(obj);
+
+    }
+
+    @Test
+    public void testToJSONOjectReplaceXMLError(){
+        String xmlStr = "<?xml version=\"1.0\"?>\n" +
+                "<catalog>\n" +
+                "   <book id=\"bk101\">\n" +
+                "      <author>Gambardella, Matthew</author>\n" +
+                "      <title>XML Developer's Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>44.95</price>\n" +
+                "      <publish_date>2000-10-01</publish_date>\n" +
+                "      <description>An in-depth look at creating applications \n" +
+                "      with XML.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk102\">\n" +
+                "      <author>Ralls, Kim</author>\n" +
+                "      <title>Midnight Rain</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-12-16</publish_date>\n" +
+                "      <description>A former architect battles corporate zombies, \n" +
+                "      an evil sorceress, and her own childhood to become queen \n" +
+                "      of the world.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk103\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Maeve Ascendant</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-11-17</publish_date>\n" +
+                "      <description>After the collapse of a nanotechnology \n" +
+                "      society in England, the young survivors lay the \n" +
+                "      foundation for a new society.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk104\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Oberon's Legacy</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-03-10</publish_date>\n" +
+                "      <description>In post-apocalypse England, the mysterious \n" +
+                "      agent known only as Oberon helps to create a new life \n" +
+                "      for the inhabitants of London. Sequel to Maeve \n" +
+                "      Ascendant.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk105\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>The Sundered Grail</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-09-10</publish_date>\n" +
+                "      <description>The two daughters of Maeve, half-sisters, \n" +
+                "      battle one another for control of England. Sequel to \n" +
+                "      Oberon's Legacy.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk106\">\n" +
+                "      <author>Randall, Cynthia</author>\n" +
+                "      <title>Lover Birds</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-09-02</publish_date>\n" +
+                "      <description>When Carla meets Paul at an ornithology \n" +
+                "      conference, tempers fly as feathers get ruffled.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk107\">\n" +
+                "      <author>Thurman, Paula</author>\n" +
+                "      <title>Splish Splash</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>A deep sea diver finds true love twenty \n" +
+                "      thousand leagues beneath the sea.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk108\">\n" +
+                "      <author>Knorr, Stefan</author>\n" +
+                "      <title>Creepy Crawlies</title>\n" +
+                "      <genre>Horror</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-12-06</publish_date>\n" +
+                "      <description>An anthology of horror stories about roaches,\n" +
+                "      centipedes, scorpions  and other insects.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk109\">\n" +
+                "      <author>Kress, Peter</author>\n" +
+                "      <title>Paradox Lost</title>\n" +
+                "      <genre>Science Fiction</genre>\n" +
+                "      <price>6.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>After an inadvertant trip through a Heisenberg\n" +
+                "      Uncertainty Device, James Salway discovers the problems \n" +
+                "      of being quantum.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk110\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>Microsoft .NET: The Programming Bible</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-09</publish_date>\n" +
+                "      <description>Microsoft's .NET initiative is explored in \n" +
+                "      detail in this deep programmer's reference.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk111\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>MSXML3: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-01</publish_date>\n" +
+                "      <description>The Microsoft MSXML3 parser is covered in \n" +
+                "      detail, with attention to XML DOM interfaces, XSLT processing, \n" +
+                "      SAX and more.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk112\">\n" +
+                "      <author>Galos, Mike</author>\n" +
+                "      <title>Visual Studio 7: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>49.95</price>\n" +
+                "      <publish_date>2001-04-16</publish_date>\n" +
+                "      <description>Microsoft Visual Studio 7 is explored in depth,\n" +
+                "      looking at how Visual Basic, Visual C++, C#, and ASP+ are \n" +
+                "      integrated into a comprehensive development \n" +
+                "      environment.</description>\n" +
+                "   \n" +
+                "</catalog>";
+        Reader reader = new StringReader(xmlStr);
+        JSONPointer pointer = new JSONPointer("/catalog/book/1");
+
+        JSONObject newObject = new JSONObject();
+        newObject.put("University", "UCI");
+        newObject.put("School", "ICS");
+        newObject.put("Program", "MSWE");
+        newObject.put("Year", 2021);
+
+
+        //pointer path does not exist expecting NULL to be returned
+        //Assert.assertNull(obj);
+
+        try {
+            JSONObject obj =  XML.toJSONObject(reader,pointer,newObject);
+            fail("Expecting a Exception");
+        } catch (JSONException e) {
+            assertEquals("Expecting an exception message",
+                    "Mismatched book and catalog at 4421 [character 9 line 120]",
+                    e.getMessage());
+        }
+    }
+
+    @Test
+    public void testToJSONObjectGetSubObjectXMLError(){
+        String xmlStr =
+                "<?xml version=\"1.0\"?>\n" +
+                        "<catalog\n" +
+                        "   <book id=\"bk101\">\n" +
+                        "      <author>Gambardella, Matthew</author>\n" +
+                        "      <title>XML Developer's Guide</title>\n" +
+                        "      <genre>Computer</genre>\n" +
+                        "      <price>44.95</price>\n" +
+                        "      <publish_date>2000-10-01</publish_date>\n" +
+                        "      <description>An in-depth look at creating applications \n" +
+                        "      with XML.</description>\n" +
+                        "   </book>\n" +
+                        "   <book id=\"bk102\">\n" +
+                        "      <author>Ralls, Kim</author>\n" +
+                        "      <title>Midnight Rain</title>\n" +
+                        "      <genre>Fantasy</genre>\n" +
+                        "      <price>5.95</price>\n" +
+                        "      <publish_date>2000-12-16</publish_date>\n" +
+                        "      <description>A former architect battles corporate zombies, \n" +
+                        "      an evil sorceress, and her own childhood to become queen \n" +
+                        "      of the world.</description>\n" +
+                        "   </book>\n" +
+                        "   <book id=\"bk103\">\n" +
+                        "      <author>Corets, Eva</author>\n" +
+                        "      <title>Maeve Ascendant</title>\n" +
+                        "      <genre>Fantasy</genre>\n" +
+                        "      <price>5.95</price>\n" +
+                        "      <publish_date>2000-11-17</publish_date>\n" +
+                        "      <description>After the collapse of a nanotechnology \n" +
+                        "      society in England, the young survivors lay the \n" +
+                        "      foundation for a new society.</description>\n" +
+                        "   </book>\n" +
+                        "   <book id=\"bk104\">\n" +
+                        "      <author>Corets, Eva</author>\n" +
+                        "      <title>Oberon's Legacy</title>\n" +
+                        "      <genre>Fantasy</genre>\n" +
+                        "      <price>5.95</price>\n" +
+                        "      <publish_date>2001-03-10</publish_date>\n" +
+                        "      <description>In post-apocalypse England, the mysterious \n" +
+                        "      agent known only as Oberon helps to create a new life \n" +
+                        "      for the inhabitants of London. Sequel to Maeve \n" +
+                        "      Ascendant.</description>\n" +
+                        "   </book>\n" +
+                        "   <book id=\"bk105\">\n" +
+                        "      <author>Corets, Eva</author>\n" +
+                        "      <title>The Sundered Grail</title>\n" +
+                        "      <genre>Fantasy</genre>\n" +
+                        "      <price>5.95</price>\n" +
+                        "      <publish_date>2001-09-10</publish_date>\n" +
+                        "      <description>The two daughters of Maeve, half-sisters, \n" +
+                        "      battle one another for control of England. Sequel to \n" +
+                        "      Oberon's Legacy.</description>\n" +
+                        "   </book>\n"+
+                        "</catalog>";
+        JSONPointer pointer = new JSONPointer("/catalog/book/2");
+        Reader reader = new StringReader(xmlStr);
+
+        try {
+            JSONObject actualJson = XML.toJSONObject(reader,pointer);
+            fail("Expecting a Exception");
+        } catch (JSONException e) {
+            assertEquals("Expecting an exception message",
+                    "Misplaced '<' at 35 [character 4 line 3]",
+                    e.getMessage());
+        }
     }
 }

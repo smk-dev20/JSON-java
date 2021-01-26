@@ -464,8 +464,8 @@ This is for milestone2
                     System.out.println("FINALLY@@@@@@@@@@");
                    // context.put(tokenKey,replacement);
                     //resetting to false to allow for continue in case of task2 milestone2
-                    found = false;
-                    index = -1;
+                   // found = false;
+                    //index = -1;
                     replacement = null;
                 }
                 else {
@@ -951,7 +951,7 @@ This is for milestone2
       System.out.println(" Need to find "+tokenKey);
 
       XMLTokener x = new XMLTokener(reader);
-      System.out.println("tokener*** "+x.toString());
+      System.out.println("tokener*** "+x.toString()+found +index);
       StringBuilder sb = new StringBuilder();
       while (x.more()) {
           x.skipPast("<");
@@ -965,6 +965,11 @@ This is for milestone2
           }
 
       }
+      //reset globals for next test
+      found = false;
+      index = -1;
+
+
       System.out.println(jo.toString(2));
       Map<String, Object> map = null;
       if(lastKey.matches("-?\\d+(.\\d+)?")&& Integer.parseInt(lastKey)!=0) {
@@ -984,6 +989,7 @@ This is for milestone2
      // return (JSONObject) path.queryFrom(jo);
 
     }
+
     /*
      * method      : replace
      * input       : JSONObject - generated from file, String - key whose value should be replaced,
@@ -1019,21 +1025,18 @@ This is for milestone2
     public static JSONObject toJSONObject(Reader reader, JSONPointer path, JSONObject replacement){
         String keyToReplace = path.toString().substring(path.toString().lastIndexOf('/')+1,path.toString().length());
         String pathToObject = path.toString().substring(0,path.toString().lastIndexOf('/'));
+
         Object obj = XML.toJSONObject(reader);
         JSONPointer pointer = new JSONPointer(pathToObject);
         Object subObject =  pointer.queryFrom(obj);
-
-        System.out.println(keyToReplace);
-        System.out.println(pathToObject);
-
-        if(subObject instanceof JSONArray) {
-            System.out.println("Sub is array");
-            replaceInArray((JSONArray) pointer.queryFrom(obj), Integer.parseInt(keyToReplace), replacement);
+        if(subObject==null){
+            return null;
         }
-            else {
-            System.out.println("Sub is object");
-            replace((JSONObject) pointer.queryFrom(obj), keyToReplace, replacement);
-        }
+            if (subObject instanceof JSONArray) {
+                replaceInArray((JSONArray) pointer.queryFrom(obj), Integer.parseInt(keyToReplace), replacement);
+            } else {
+                replace((JSONObject) pointer.queryFrom(obj), keyToReplace, replacement);
+            }
 
         return (JSONObject) obj;
     }
