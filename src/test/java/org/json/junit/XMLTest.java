@@ -1208,7 +1208,7 @@ public class XMLTest {
                 "\"xsi:noNamespaceSchemaLocation\":\"test.xsd\",\"xmlns:xsi\":\"http://www.w3.org/2001/XMLSchema-instance\"}}";
         JSONObject expectedJson = new JSONObject(expectedJsonString);
         JSONObject actualJson = XML.toJSONObject(reader,pointer,newObject);
-        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+       Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
     }
 
     @Test
@@ -1221,19 +1221,14 @@ public class XMLTest {
 
         InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
         Reader xmlReader = new InputStreamReader(xmlStream);
-        JSONPointer pointer = new JSONPointer("/clinical_study/eligibility/study_pop/textblock");
+        JSONPointer pointer = new JSONPointer("/clinical_study/secondary_outcome/1");
 
         String expectedJsonString = "{\"clinical_study\": {\n" +
                 "  \"brief_summary\": {\"textblock\": \"CLEAR SYNERGY is an international multi center 2x2 randomized placebo controlled trial of\"},\n" +
                 "  \"brief_title\": \"CLEAR SYNERGY Neutrophil Substudy\",\n" +
                 "  \"overall_status\": \"Recruiting\",\n" +
                 "  \"eligibility\": {\n" +
-                "    \"study_pop\": {\"textblock\": {\n" +
-                "      \"School\": \"ICS\",\n" +
-                "      \"Program\": \"MSWE\",\n" +
-                "      \"University\": \"UCI\",\n" +
-                "      \"Year\": 2021\n" +
-                "    }},\n" +
+                "    \"study_pop\": {\"textblock\": \"Patients who are randomized to the drug RCT portion of the CLEAR SYNERGY (OASIS 9) trial\"},\n" +
                 "    \"minimum_age\": \"19 Years\",\n" +
                 "    \"sampling_method\": \"Non-Probability Sample\",\n" +
                 "    \"gender\": \"All\",\n" +
@@ -1319,9 +1314,10 @@ public class XMLTest {
                 "      \"description\": \"Other markers of neutrophil activity will be evaluated at baseline and 3 months after STEMI (myeloperoxidase, matrix metalloproteinase-9, neutrophil gelatinase-associated lipocalin, neutrophil elastase, intercellular/vascular cellular adhesion molecules)\"\n" +
                 "    },\n" +
                 "    {\n" +
-                "      \"measure\": \"Markers of systemic inflammation\",\n" +
-                "      \"time_frame\": \"between baseline and 3 months\",\n" +
-                "      \"description\": \"Markers of systemic inflammation will be evaluated at baseline and 3 months after STEMI (high sensitive CRP, IL-1β)\"\n" +
+                "      \"School\": \"ICS\",\n" +
+                "      \"Program\": \"MSWE\",\n" +
+                "      \"University\": \"UCI\",\n" +
+                "      \"Year\": 2021\n" +
                 "    },\n" +
                 "    {\n" +
                 "      \"measure\": \"Neutrophil-driven responses that may further propagate injury\",\n" +
