@@ -1,0 +1,49 @@
+MSWE 262P Programming Styles - Milestone 3 Project
+Sherlin Mary Koshy (smkoshy)
+
+REQUIREMENTS :
+*Add an overloaded static method to the XML class with the signature static JSONObject toJSONObject(Reader reader, YOURTYPEHERE keyTransformer)
+* which does, inside the library, the kinds of things you did in task 4 of milestone 1, but in a much more general manner, for any transformations of keys. Specifically, YOURTYPEHERE should be a function (or "functional" in Java) that takes as input a String  denoting a key and returns another String that is the transformation of the key. For example:
+*    "foo" --> "swe262_foo"
+*    "foo" --> "oof"
+* Remember, these are functions provided by the client code, so they can be quite powerful and include all sorts of string matching and transformation logic.
+* The goal here is that you do the transformation during the parsing of the XML file, not in another pass afterwards.
+* In a README file, comment on the performance implications of doing this inside the library vs. doing it in client code, as you did in Milestone 1.
+* Write unit tests for your new function
+
+IMPLEMENTATION DETAILS :
+- Method with specified signature was added into XML class
+- Method returns null if Function parameter is null (caller has to ensure valid Function is given)
+- Method calls a modification of the original parse method called parseRenameKey() which applies the specified
+  keyTransformation Function on the keys in XML while parsing.
+
+BUILDING THE PROJECT
+- Project can be built using the gradle command
+> gradlew clean build test
+  (Project needs to be launched as a gradle project - refer README_MILESTONE2 for helpful resource on how this can be done)
+- Generated gradle test report includes the 4 added unit test cases for "RenameKeys" and all tests were reported as passed.
+
+PERFORMANCE IMPLICATIONS :
+The goal of this method is to perform some form of a string transformation on the keys in the XML.
+Since we need to access all keys in order to transform them, a complete parse of the XML file is inevitably needed.
+XML's can have deeply nested structures, for example value of a given key results in a JSONArray of JSONObjects,
+where each Object has keys whose values are Arrays/Objects and so on.
+The technique used to resolve these kinds of nested structures is often recursive in nature.
+
+Recursion requires the compiler to keep track of the sequence of recursive calls in some form of a data structure,
+usually a stack. As more recursive calls are made, the size of the stack also grows ultimately running out of available
+space and causing a StackOverflow/OutOfMemory Error.
+
+Attempting to rename the keys on the client side will mean that recursion needs to be performed twice,
+once on parsing the file before converting to JSONObject and then once again on the JSONObject to retrieve
+the keys possibly accompanied by yet another complex technique to reconstruct the JSONObject with renamed keys.
+
+This results in code that is extremely slow.
+
+We can mitigate some of these performance issues if we are able to transform the keys while the XML file is
+being parsed. The use of Functions provided by JAVA 8 and the lambda expressions that can be built using them is a good candidate
+to help resolve the performance issues.
+As implemented in the added method, the JAVA 8 Function provided by the client is sent to the parse method as an additional parameter
+and is used to transform the keys obtained while parsing.
+Hence no additional data structure is needed apart from what was already being used by the existing parse operation.
+This results in a much better performance than if we attempted to transform the keys on the client side.

@@ -24,12 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -40,12 +34,15 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.json.*;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+
+import static org.junit.Assert.*;
 
 
 /**
@@ -2000,4 +1997,303 @@ public class XMLTest {
                     e.getMessage());
         }
     }
+
+    @Test
+    public void testToJSONObjectRenameKeySimple(){
+        String xmlStr =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"+
+                        "<addresses xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""+
+                        "   xsi:noNamespaceSchemaLocation='test.xsd'>\n"+
+                        "   <address>\n"+
+                        "       <name>Joe Tester</name>\n"+
+                        "       <street>[CDATA[Baker street 5]</street>\n"+
+                        "       <NothingHere/>\n"+
+                        "       <TrueValue>true</TrueValue>\n"+
+                        "       <FalseValue>false</FalseValue>\n"+
+                        "       <NullValue>null</NullValue>\n"+
+                        "       <PositiveValue>42</PositiveValue>\n"+
+                        "       <NegativeValue>-23</NegativeValue>\n"+
+                        "       <DoubleValue>-23.45</DoubleValue>\n"+
+                        "       <Nan>-23x.45</Nan>\n"+
+                        "       <ArrayOfNum>1, 2, 3, 4.1, 5.2</ArrayOfNum>\n"+
+                        "   </address>\n"+
+                        "</addresses>";
+
+        String expectedJsonString ="{\"swe_262P_addresses\": {\n" +
+                "  \"swe_262P_xsi:noNamespaceSchemaLocation\": \"test.xsd\",\n" +
+                "  \"swe_262P_address\": {\n" +
+                "    \"swe_262P_Nan\": \"-23x.45\",\n" +
+                "    \"swe_262P_street\": \"[CDATA[Baker street 5]\",\n" +
+                "    \"swe_262P_FalseValue\": false,\n" +
+                "    \"swe_262P_ArrayOfNum\": \"1, 2, 3, 4.1, 5.2\",\n" +
+                "    \"swe_262P_NothingHere\": \"\",\n" +
+                "    \"swe_262P_NegativeValue\": -23,\n" +
+                "    \"swe_262P_DoubleValue\": -23.45,\n" +
+                "    \"swe_262P_TrueValue\": true,\n" +
+                "    \"swe_262P_name\": \"Joe Tester\",\n" +
+                "    \"swe_262P_NullValue\": null,\n" +
+                "    \"swe_262P_PositiveValue\": 42\n" +
+                "  },\n" +
+                "  \"swe_262P_xmlns:xsi\": \"http://www.w3.org/2001/XMLSchema-instance\"\n" +
+                "}}";
+        Reader reader = new StringReader(xmlStr);
+        Function<String, String> func = x -> "swe_262P_"+x;
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+        JSONObject actualJson = XML.toJSONObject(reader,func);
+        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testToJSONObjectRenameKeyNested(){
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);
+
+
+        String expectedJsonString ="{\"clinical_studysweP\": {\n" +
+                "  \"brief_summarysweP\": {\"textblocksweP\": \"CLEAR SYNERGY is an international multi center 2x2 randomized placebo controlled trial of\"},\n" +
+                "  \"arm_groupsweP\": [\n" +
+                "    {\"arm_group_labelsweP\": \"Colchicine\"},\n" +
+                "    {\"arm_group_labelsweP\": \"Placebo\"}\n" +
+                "  ],\n" +
+                "  \"enrollmentsweP\": {\n" +
+                "    \"typesweP\": \"Anticipated\",\n" +
+                "    \"content\": 670\n" +
+                "  },\n" +
+                "  \"sourcesweP\": \"NYU Langone Health\",\n" +
+                "  \"study_first_postedsweP\": {\n" +
+                "    \"typesweP\": \"Actual\",\n" +
+                "    \"content\": \"March 14, 2019\"\n" +
+                "  },\n" +
+                "  \"study_first_submittedsweP\": \"March 12, 2019\",\n" +
+                "  \"location_countriessweP\": {\"countrysweP\": \"United States\"},\n" +
+                "  \"study_first_submitted_qcsweP\": \"March 12, 2019\",\n" +
+                "  \"id_infosweP\": {\n" +
+                "    \"secondary_idsweP\": \"1R01HL146206\",\n" +
+                "    \"org_study_idsweP\": \"18-01323\",\n" +
+                "    \"nct_idsweP\": \"NCT03874338\"\n" +
+                "  },\n" +
+                "  \"intervention_browsesweP\": {\"mesh_termsweP\": \"Colchicine\"},\n" +
+                "  \"overall_statussweP\": \"Recruiting\",\n" +
+                "  \"overall_officialsweP\": {\n" +
+                "    \"last_namesweP\": \"Binita Shah, MD\",\n" +
+                "    \"rolesweP\": \"Principal Investigator\",\n" +
+                "    \"affiliationsweP\": \"NYU School of Medicine\"\n" +
+                "  },\n" +
+                "  \"has_expanded_accesssweP\": \"No\",\n" +
+                "  \"conditionsweP\": [\n" +
+                "    \"Neutrophils.Hypersegmented | Bld-Ser-Plas\",\n" +
+                "    \"STEMI - ST Elevation Myocardial Infarction\"\n" +
+                "  ],\n" +
+                "  \"interventionsweP\": {\n" +
+                "    \"intervention_namesweP\": \"Colchicine Pill\",\n" +
+                "    \"descriptionsweP\": \"Participants in the main CLEAR SYNERGY trial are randomized to colchicine/spironolactone versus placebo in a 2x2 factorial design. The substudy is interested in the evaluation of biospecimens obtained from patients in the colchicine vs placebo group.\",\n" +
+                "    \"arm_group_labelsweP\": [\n" +
+                "      \"Colchicine\",\n" +
+                "      \"Placebo\"\n" +
+                "    ],\n" +
+                "    \"intervention_typesweP\": \"Drug\"\n" +
+                "  },\n" +
+                "  \"overall_contactsweP\": {\n" +
+                "    \"last_namesweP\": \"Fatmira Curovic\",\n" +
+                "    \"phonesweP\": \"646-501-9648\",\n" +
+                "    \"emailsweP\": \"fatmira.curovic@nyumc.org\"\n" +
+                "  },\n" +
+                "  \"sponsorssweP\": {\n" +
+                "    \"collaboratorsweP\": [\n" +
+                "      {\n" +
+                "        \"agencysweP\": \"Population Health Research Institute\",\n" +
+                "        \"agency_classsweP\": \"Other\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "        \"agencysweP\": \"National Heart, Lung, and Blood Institute (NHLBI)\",\n" +
+                "        \"agency_classsweP\": \"NIH\"\n" +
+                "      }\n" +
+                "    ],\n" +
+                "    \"lead_sponsorsweP\": {\n" +
+                "      \"agencysweP\": \"NYU Langone Health\",\n" +
+                "      \"agency_classsweP\": \"Other\"\n" +
+                "    }\n" +
+                "  },\n" +
+                "  \"condition_browsesweP\": {\"mesh_termsweP\": [\n" +
+                "    \"Myocardial Infarction\",\n" +
+                "    \"ST Elevation Myocardial Infarction\",\n" +
+                "    \"Infarction\"\n" +
+                "  ]},\n" +
+                "  \"primary_completion_datesweP\": {\n" +
+                "    \"typesweP\": \"Anticipated\",\n" +
+                "    \"content\": \"February 1, 2021\"\n" +
+                "  },\n" +
+                "  \"start_datesweP\": {\n" +
+                "    \"typesweP\": \"Actual\",\n" +
+                "    \"content\": \"March 4, 2019\"\n" +
+                "  },\n" +
+                "  \"overall_contact_backupsweP\": {\"last_namesweP\": \"Binita Shah, MD\"},\n" +
+                "  \"number_of_groupssweP\": 2,\n" +
+                "  \"study_design_infosweP\": {\n" +
+                "    \"observational_modelsweP\": \"Other\",\n" +
+                "    \"time_perspectivesweP\": \"Prospective\"\n" +
+                "  },\n" +
+                "  \"required_headersweP\": {\n" +
+                "    \"urlsweP\": \"https://clinicaltrials.gov/show/NCT03874338\",\n" +
+                "    \"link_textsweP\": \"Link to the current ClinicalTrials.gov record.\",\n" +
+                "    \"download_datesweP\": \"ClinicalTrials.gov processed this data on July 19, 2020\"\n" +
+                "  },\n" +
+                "  \"responsible_partysweP\": {\n" +
+                "    \"investigator_full_namesweP\": \"Binita Shah\",\n" +
+                "    \"investigator_affiliationsweP\": \"NYU Langone Health\",\n" +
+                "    \"investigator_titlesweP\": \"Assistant Professor of Medicine\",\n" +
+                "    \"responsible_party_typesweP\": \"Principal Investigator\"\n" +
+                "  },\n" +
+                "  \"secondary_outcomesweP\": [\n" +
+                "    {\n" +
+                "      \"time_framesweP\": \"between baseline and 3 months\",\n" +
+                "      \"measuresweP\": \"Other soluble markers of neutrophil activity\",\n" +
+                "      \"descriptionsweP\": \"Other markers of neutrophil activity will be evaluated at baseline and 3 months after STEMI (myeloperoxidase, matrix metalloproteinase-9, neutrophil gelatinase-associated lipocalin, neutrophil elastase, intercellular/vascular cellular adhesion molecules)\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"time_framesweP\": \"between baseline and 3 months\",\n" +
+                "      \"measuresweP\": \"Markers of systemic inflammation\",\n" +
+                "      \"descriptionsweP\": \"Markers of systemic inflammation will be evaluated at baseline and 3 months after STEMI (high sensitive CRP, IL-1Î²)\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"time_framesweP\": \"between baseline and 3 months\",\n" +
+                "      \"measuresweP\": \"Neutrophil-driven responses that may further propagate injury\",\n" +
+                "      \"descriptionsweP\": \"Neutrophil-driven responses that may further propagate injury will be evaluated at baseline and 3 months after STEMI (neutrophil extracellular traps, neutrophil-derived microparticles)\"\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"official_titlesweP\": \"Studies on the Effects of Colchicine on Neutrophil Biology in Acute Myocardial Infarction: A Substudy of the CLEAR SYNERGY (OASIS 9) Trial\",\n" +
+                "  \"eligibilitysweP\": {\n" +
+                "    \"sampling_methodsweP\": \"Non-Probability Sample\",\n" +
+                "    \"gendersweP\": \"All\",\n" +
+                "    \"study_popsweP\": {\"textblocksweP\": \"Patients who are randomized to the drug RCT portion of the CLEAR SYNERGY (OASIS 9) trial\"},\n" +
+                "    \"healthy_volunteerssweP\": \"No\",\n" +
+                "    \"maximum_agesweP\": \"110 Years\",\n" +
+                "    \"minimum_agesweP\": \"19 Years\",\n" +
+                "    \"criteriasweP\": {\"textblocksweP\": \"Inclusion Criteria:\"}\n" +
+                "  },\n" +
+                "  \"primary_outcomesweP\": {\n" +
+                "    \"time_framesweP\": \"between baseline and 3 months\",\n" +
+                "    \"measuresweP\": \"soluble L-selectin\",\n" +
+                "    \"descriptionsweP\": \"Change in soluble L-selectin between baseline and 3 mo after STEMI in the placebo vs. colchicine groups.\"\n" +
+                "  },\n" +
+                "  \"locationsweP\": {\n" +
+                "    \"contactsweP\": {\n" +
+                "      \"last_namesweP\": \"Fatmira Curovic\",\n" +
+                "      \"phonesweP\": \"646-501-9648\",\n" +
+                "      \"emailsweP\": \"fatmira.curovic@nyumc.org\"\n" +
+                "    },\n" +
+                "    \"facilitysweP\": {\n" +
+                "      \"addresssweP\": {\n" +
+                "        \"zipsweP\": 10016,\n" +
+                "        \"citysweP\": \"New York\",\n" +
+                "        \"statesweP\": \"New York\",\n" +
+                "        \"countrysweP\": \"United States\"\n" +
+                "      },\n" +
+                "      \"namesweP\": \"NYU School of Medicine\"\n" +
+                "    },\n" +
+                "    \"statussweP\": \"Recruiting\",\n" +
+                "    \"contact_backupsweP\": {\"last_namesweP\": \"Binita Shah, MD\"}\n" +
+                "  },\n" +
+                "  \"last_update_postedsweP\": {\n" +
+                "    \"typesweP\": \"Actual\",\n" +
+                "    \"content\": \"September 12, 2019\"\n" +
+                "  },\n" +
+                "  \"last_update_submittedsweP\": \"September 10, 2019\",\n" +
+                "  \"brief_titlesweP\": \"CLEAR SYNERGY Neutrophil Substudy\",\n" +
+                "  \"oversight_infosweP\": {\n" +
+                "    \"has_dmcsweP\": \"No\",\n" +
+                "    \"is_fda_regulated_drugsweP\": \"No\",\n" +
+                "    \"is_fda_regulated_devicesweP\": \"No\"\n" +
+                "  },\n" +
+                "  \"verification_datesweP\": \"September 2019\",\n" +
+                "  \"patient_datasweP\": {\"sharing_ipdsweP\": \"No\"},\n" +
+                "  \"last_update_submitted_qcsweP\": \"September 10, 2019\",\n" +
+                "  \"completion_datesweP\": {\n" +
+                "    \"typesweP\": \"Anticipated\",\n" +
+                "    \"content\": \"February 1, 2022\"\n" +
+                "  },\n" +
+                "  \"study_typesweP\": \"Observational\"\n" +
+                "}}";
+
+        Function<String, String> func = x -> x.concat("sweP");
+
+       JSONObject expectedJson = new JSONObject(expectedJsonString);
+        JSONObject actualJson = XML.toJSONObject(xmlReader,func);
+        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testToJSONObjectRenameNullFunction(){
+        String xmlStr =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"+
+                        "<addresses xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""+
+                        "   xsi:noNamespaceSchemaLocation='test.xsd'>\n"+
+                        "   <address>\n"+
+                        "       <name>Joe Tester</name>\n"+
+                        "       <street>[CDATA[Baker street 5]</street>\n"+
+                        "       <NothingHere/>\n"+
+                        "       <TrueValue>true</TrueValue>\n"+
+                        "       <FalseValue>false</FalseValue>\n"+
+                        "       <NullValue>null</NullValue>\n"+
+                        "       <PositiveValue>42</PositiveValue>\n"+
+                        "       <NegativeValue>-23</NegativeValue>\n"+
+                        "       <DoubleValue>-23.45</DoubleValue>\n"+
+                        "       <Nan>-23x.45</Nan>\n"+
+                        "       <ArrayOfNum>1, 2, 3, 4.1, 5.2</ArrayOfNum>\n"+
+                        "   </address>\n"+
+                        "</addresses>";
+
+        Reader reader = new StringReader(xmlStr);
+        Function func = null;
+        JSONObject actualJson = XML.toJSONObject(reader,func);
+        assertNull(actualJson);
+    }
+
+    @Test
+    public void testToJSONObjectRenameMultilineFunction(){
+        String xmlStr =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"+
+                        "<addresses xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""+
+                        "   xsi:noNamespaceSchemaLocation='test.xsd'>\n"+
+                        "   <address>\n"+
+                        "       <name>Joe Tester</name>\n"+
+                        "       <street>[CDATA[Baker street 5]</street>\n"+
+                        "       <NothingHere/>\n"+
+                        "       <TrueValue>true</TrueValue>\n"+
+                        "       <FalseValue>false</FalseValue>\n"+
+                        "       <NullValue>null</NullValue>\n"+
+                        "       <PositiveValue>42</PositiveValue>\n"+
+                        "       <NegativeValue>-23</NegativeValue>\n"+
+                        "       <DoubleValue>-23.45</DoubleValue>\n"+
+                        "       <Nan>-23x.45</Nan>\n"+
+                        "       <ArrayOfNum>1, 2, 3, 4.1, 5.2</ArrayOfNum>\n"+
+                        "   </address>\n"+
+                        "</addresses>";
+
+        String expectedJsonString ="{\"sesserdda\": {\n" +
+                "  \"isx:snlmx\": \"http://www.w3.org/2001/XMLSchema-instance\",\n" +
+                "  \"sserdda\": {\n" +
+                "    \"muNfOyarrA\": \"1, 2, 3, 4.1, 5.2\",\n" +
+                "    \"eulaVeslaF\": false,\n" +
+                "    \"eulaVlluN\": null,\n" +
+                "    \"eulaVeurT\": true,\n" +
+                "    \"eman\": \"Joe Tester\",\n" +
+                "    \"naN\": \"-23x.45\",\n" +
+                "    \"teerts\": \"[CDATA[Baker street 5]\",\n" +
+                "    \"eulaVevitisoP\": 42,\n" +
+                "    \"eulaVevitageN\": -23,\n" +
+                "    \"eulaVelbuoD\": -23.45,\n" +
+                "    \"ereHgnihtoN\": \"\"\n" +
+                "  },\n" +
+                "  \"noitacoLamehcSecapsemaNon:isx\": \"test.xsd\"\n" +
+                "}}";
+        Reader reader = new StringReader(xmlStr);
+        Function<String, String> func = x -> { StringBuilder sb = new StringBuilder(x);
+                                                sb = sb.reverse();
+                                                return sb.toString(); };
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+        JSONObject actualJson = XML.toJSONObject(reader,func);
+       Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
 }

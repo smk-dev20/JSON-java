@@ -14,3 +14,7 @@ build
 /gradlew
 /gradlew.bat
 .gitmodules
+
+#ignore added .hprof files added when using JAVA 8 milestone3
+java_pid26332.hprof
+java_pid26856.hprof
