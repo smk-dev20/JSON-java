@@ -29,6 +29,15 @@ IMPLEMENTATION DETAILS :
 - An additional Milestone2_Test class and an XML file in a folder named XML were
   included in the Test folder to allow for debugging during development.
 
+IMPLEMENTATION UPDATE
+- Added a new method parsePathReplace() which will be called for the replaceObject requirement
+- Parse checks global variable values to determine when the needed object exists
+- replace() or replaceInArray() is called as appropriate
+- global variables changed to prevent any further replace
+- parse is allowed to continue as before to build the remaining object
+- All existing test cases pass with the added code change
+
+
 TESTING THE CODE :
 - Run all tests within XMLTest / run each individual test case as needed.
 - Code within MileStone2_Test can also be run to see the returned objects printed to console.
