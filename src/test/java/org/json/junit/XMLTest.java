@@ -33,8 +33,11 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.json.*;
 import org.junit.Assert;
@@ -42,6 +45,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.*;
 
 
@@ -2294,6 +2298,490 @@ public class XMLTest {
         JSONObject expectedJson = new JSONObject(expectedJsonString);
         JSONObject actualJson = XML.toJSONObject(reader,func);
        Util.compareActualVsExpectedJsonObjects(actualJson,expectedJson);
+    }
+
+    @Test
+    public void testToStreamGetAllPaths(){
+
+        String xmlStr = "<?xml version=\"1.0\"?>\n" +
+                "<catalog>\n" +
+                "   <book id=\"bk101\">\n" +
+                "      <author>Gambardella, Matthew</author>\n" +
+                "      <title>XML Developer's Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>44.95</price>\n" +
+                "      <publish_date>2000-10-01</publish_date>\n" +
+                "      <description>An in-depth look at creating applications \n" +
+                "      with XML.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk102\">\n" +
+                "      <author>Ralls, Kim</author>\n" +
+                "      <title>Midnight Rain</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-12-16</publish_date>\n" +
+                "      <description>A former architect battles corporate zombies, \n" +
+                "      an evil sorceress, and her own childhood to become queen \n" +
+                "      of the world.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk103\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Maeve Ascendant</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-11-17</publish_date>\n" +
+                "      <description>After the collapse of a nanotechnology \n" +
+                "      society in England, the young survivors lay the \n" +
+                "      foundation for a new society.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk104\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Oberon's Legacy</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-03-10</publish_date>\n" +
+                "      <description>In post-apocalypse England, the mysterious \n" +
+                "      agent known only as Oberon helps to create a new life \n" +
+                "      for the inhabitants of London. Sequel to Maeve \n" +
+                "      Ascendant.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk105\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>The Sundered Grail</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-09-10</publish_date>\n" +
+                "      <description>The two daughters of Maeve, half-sisters, \n" +
+                "      battle one another for control of England. Sequel to \n" +
+                "      Oberon's Legacy.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk106\">\n" +
+                "      <author>Randall, Cynthia</author>\n" +
+                "      <title>Lover Birds</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-09-02</publish_date>\n" +
+                "      <description>When Carla meets Paul at an ornithology \n" +
+                "      conference, tempers fly as feathers get ruffled.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk107\">\n" +
+                "      <author>Thurman, Paula</author>\n" +
+                "      <title>Splish Splash</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>A deep sea diver finds true love twenty \n" +
+                "      thousand leagues beneath the sea.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk108\">\n" +
+                "      <author>Knorr, Stefan</author>\n" +
+                "      <title>Creepy Crawlies</title>\n" +
+                "      <genre>Horror</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-12-06</publish_date>\n" +
+                "      <description>An anthology of horror stories about roaches,\n" +
+                "      centipedes, scorpions  and other insects.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk109\">\n" +
+                "      <author>Kress, Peter</author>\n" +
+                "      <title>Paradox Lost</title>\n" +
+                "      <genre>Science Fiction</genre>\n" +
+                "      <price>6.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>After an inadvertant trip through a Heisenberg\n" +
+                "      Uncertainty Device, James Salway discovers the problems \n" +
+                "      of being quantum.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk110\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>Microsoft .NET: The Programming Bible</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-09</publish_date>\n" +
+                "      <description>Microsoft's .NET initiative is explored in \n" +
+                "      detail in this deep programmer's reference.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk111\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>MSXML3: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-01</publish_date>\n" +
+                "      <description>The Microsoft MSXML3 parser is covered in \n" +
+                "      detail, with attention to XML DOM interfaces, XSLT processing, \n" +
+                "      SAX and more.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk112\">\n" +
+                "      <author>Galos, Mike</author>\n" +
+                "      <title>Visual Studio 7: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>49.95</price>\n" +
+                "      <publish_date>2001-04-16</publish_date>\n" +
+                "      <description>Microsoft Visual Studio 7 is explored in depth,\n" +
+                "      looking at how Visual Basic, Visual C++, C#, and ASP+ are \n" +
+                "      integrated into a comprehensive development \n" +
+                "      environment.</description>\n" +
+                "   </book>\n" +
+                "</catalog>";
+        Reader reader = new StringReader(xmlStr);
+        JSONObject obj = XML.toJSONObject(reader);
+
+        String expectedOutput ="[/catalog, /catalog/book, /catalog/book/0, /catalog/book/1, /catalog/book/2, /catalog/book/3, /catalog/book/4, /catalog/book/5, /catalog/book/6, /catalog/book/7, /catalog/book/8, /catalog/book/9, /catalog/book/10, /catalog/book/11]";
+        List<String> paths = obj.toStream()
+                .map(node -> node.getPath())
+                .collect(Collectors.toList());
+      assertEquals(expectedOutput,  paths.toString());
+    }
+
+    @Test
+    public void testToStreamFilterAuthors(){
+        String xmlStr = "<?xml version=\"1.0\"?>\n" +
+                "<catalog>\n" +
+                "   <book id=\"bk101\">\n" +
+                "      <author>Gambardella, Matthew</author>\n" +
+                "      <title>XML Developer's Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>44.95</price>\n" +
+                "      <publish_date>2000-10-01</publish_date>\n" +
+                "      <description>An in-depth look at creating applications \n" +
+                "      with XML.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk102\">\n" +
+                "      <author>Ralls, Kim</author>\n" +
+                "      <title>Midnight Rain</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-12-16</publish_date>\n" +
+                "      <description>A former architect battles corporate zombies, \n" +
+                "      an evil sorceress, and her own childhood to become queen \n" +
+                "      of the world.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk103\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Maeve Ascendant</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-11-17</publish_date>\n" +
+                "      <description>After the collapse of a nanotechnology \n" +
+                "      society in England, the young survivors lay the \n" +
+                "      foundation for a new society.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk104\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Oberon's Legacy</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-03-10</publish_date>\n" +
+                "      <description>In post-apocalypse England, the mysterious \n" +
+                "      agent known only as Oberon helps to create a new life \n" +
+                "      for the inhabitants of London. Sequel to Maeve \n" +
+                "      Ascendant.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk105\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>The Sundered Grail</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-09-10</publish_date>\n" +
+                "      <description>The two daughters of Maeve, half-sisters, \n" +
+                "      battle one another for control of England. Sequel to \n" +
+                "      Oberon's Legacy.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk106\">\n" +
+                "      <author>Randall, Cynthia</author>\n" +
+                "      <title>Lover Birds</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-09-02</publish_date>\n" +
+                "      <description>When Carla meets Paul at an ornithology \n" +
+                "      conference, tempers fly as feathers get ruffled.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk107\">\n" +
+                "      <author>Thurman, Paula</author>\n" +
+                "      <title>Splish Splash</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>A deep sea diver finds true love twenty \n" +
+                "      thousand leagues beneath the sea.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk108\">\n" +
+                "      <author>Knorr, Stefan</author>\n" +
+                "      <title>Creepy Crawlies</title>\n" +
+                "      <genre>Horror</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-12-06</publish_date>\n" +
+                "      <description>An anthology of horror stories about roaches,\n" +
+                "      centipedes, scorpions  and other insects.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk109\">\n" +
+                "      <author>Kress, Peter</author>\n" +
+                "      <title>Paradox Lost</title>\n" +
+                "      <genre>Science Fiction</genre>\n" +
+                "      <price>6.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>After an inadvertant trip through a Heisenberg\n" +
+                "      Uncertainty Device, James Salway discovers the problems \n" +
+                "      of being quantum.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk110\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>Microsoft .NET: The Programming Bible</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-09</publish_date>\n" +
+                "      <description>Microsoft's .NET initiative is explored in \n" +
+                "      detail in this deep programmer's reference.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk111\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>MSXML3: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-01</publish_date>\n" +
+                "      <description>The Microsoft MSXML3 parser is covered in \n" +
+                "      detail, with attention to XML DOM interfaces, XSLT processing, \n" +
+                "      SAX and more.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk112\">\n" +
+                "      <author>Galos, Mike</author>\n" +
+                "      <title>Visual Studio 7: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>49.95</price>\n" +
+                "      <publish_date>2001-04-16</publish_date>\n" +
+                "      <description>Microsoft Visual Studio 7 is explored in depth,\n" +
+                "      looking at how Visual Basic, Visual C++, C#, and ASP+ are \n" +
+                "      integrated into a comprehensive development \n" +
+                "      environment.</description>\n" +
+                "   </book>\n" +
+                "</catalog>";
+        Reader reader = new StringReader(xmlStr);
+        JSONObject obj = XML.toJSONObject(reader);
+
+        String expectedOutput ="[Gambardella, Matthew, Ralls, Kim, Corets, Eva, Randall, Cynthia, Thurman, Paula, Knorr, Stefan, Kress, Peter, O'Brien, Tim, Galos, Mike]";
+        List<String> authors = obj.toStream()
+		.filter(node ->(node.getKey().equals("book")))
+		.filter(node -> !(node.getValue() instanceof JSONArray))
+		.map(node ->((String)((JSONObject)node.getValue()).get("author")))
+		.distinct()
+		.collect(Collectors.toList());
+
+        assertEquals(expectedOutput,authors.toString());
+    }
+    @Test
+    public void testToStreamGetKeys(){
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);
+        JSONObject obj = XML.toJSONObject(xmlReader);
+
+        String expectedOutput ="[clinical_study, brief_summary, eligibility, study_pop, criteria, location_countries, study_design_info, intervention_browse, primary_completion_date, sponsors, lead_sponsor, collaborator, overall_official, overall_contact_backup, condition_browse, mesh_term, overall_contact, responsible_party, start_date, study_first_posted, arm_group, primary_outcome, secondary_outcome, oversight_info, last_update_posted, id_info, enrollment, condition, required_header, completion_date, location, contact, facility, address, contact_backup, intervention, arm_group_label, patient_data]";
+        List<String> paths = obj.toStream()
+                .map(node -> node.getKey())
+                .distinct()
+                .collect(Collectors.toList());
+
+        assertEquals(expectedOutput,  paths.toString());
+    }
+
+    @Test
+    public void testToStreamTransformKeys(){
+        String xmlStr = "<?xml version=\"1.0\"?>\n" +
+                "<catalog>\n" +
+                "   <book id=\"bk101\">\n" +
+                "      <author>Gambardella, Matthew</author>\n" +
+                "      <title>XML Developer's Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>44.95</price>\n" +
+                "      <publish_date>2000-10-01</publish_date>\n" +
+                "      <description>An in-depth look at creating applications \n" +
+                "      with XML.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk102\">\n" +
+                "      <author>Ralls, Kim</author>\n" +
+                "      <title>Midnight Rain</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-12-16</publish_date>\n" +
+                "      <description>A former architect battles corporate zombies, \n" +
+                "      an evil sorceress, and her own childhood to become queen \n" +
+                "      of the world.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk103\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Maeve Ascendant</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2000-11-17</publish_date>\n" +
+                "      <description>After the collapse of a nanotechnology \n" +
+                "      society in England, the young survivors lay the \n" +
+                "      foundation for a new society.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk104\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>Oberon's Legacy</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-03-10</publish_date>\n" +
+                "      <description>In post-apocalypse England, the mysterious \n" +
+                "      agent known only as Oberon helps to create a new life \n" +
+                "      for the inhabitants of London. Sequel to Maeve \n" +
+                "      Ascendant.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk105\">\n" +
+                "      <author>Corets, Eva</author>\n" +
+                "      <title>The Sundered Grail</title>\n" +
+                "      <genre>Fantasy</genre>\n" +
+                "      <price>5.95</price>\n" +
+                "      <publish_date>2001-09-10</publish_date>\n" +
+                "      <description>The two daughters of Maeve, half-sisters, \n" +
+                "      battle one another for control of England. Sequel to \n" +
+                "      Oberon's Legacy.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk106\">\n" +
+                "      <author>Randall, Cynthia</author>\n" +
+                "      <title>Lover Birds</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-09-02</publish_date>\n" +
+                "      <description>When Carla meets Paul at an ornithology \n" +
+                "      conference, tempers fly as feathers get ruffled.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk107\">\n" +
+                "      <author>Thurman, Paula</author>\n" +
+                "      <title>Splish Splash</title>\n" +
+                "      <genre>Romance</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>A deep sea diver finds true love twenty \n" +
+                "      thousand leagues beneath the sea.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk108\">\n" +
+                "      <author>Knorr, Stefan</author>\n" +
+                "      <title>Creepy Crawlies</title>\n" +
+                "      <genre>Horror</genre>\n" +
+                "      <price>4.95</price>\n" +
+                "      <publish_date>2000-12-06</publish_date>\n" +
+                "      <description>An anthology of horror stories about roaches,\n" +
+                "      centipedes, scorpions  and other insects.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk109\">\n" +
+                "      <author>Kress, Peter</author>\n" +
+                "      <title>Paradox Lost</title>\n" +
+                "      <genre>Science Fiction</genre>\n" +
+                "      <price>6.95</price>\n" +
+                "      <publish_date>2000-11-02</publish_date>\n" +
+                "      <description>After an inadvertant trip through a Heisenberg\n" +
+                "      Uncertainty Device, James Salway discovers the problems \n" +
+                "      of being quantum.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk110\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>Microsoft .NET: The Programming Bible</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-09</publish_date>\n" +
+                "      <description>Microsoft's .NET initiative is explored in \n" +
+                "      detail in this deep programmer's reference.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk111\">\n" +
+                "      <author>O'Brien, Tim</author>\n" +
+                "      <title>MSXML3: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>36.95</price>\n" +
+                "      <publish_date>2000-12-01</publish_date>\n" +
+                "      <description>The Microsoft MSXML3 parser is covered in \n" +
+                "      detail, with attention to XML DOM interfaces, XSLT processing, \n" +
+                "      SAX and more.</description>\n" +
+                "   </book>\n" +
+                "   <book id=\"bk112\">\n" +
+                "      <author>Galos, Mike</author>\n" +
+                "      <title>Visual Studio 7: A Comprehensive Guide</title>\n" +
+                "      <genre>Computer</genre>\n" +
+                "      <price>49.95</price>\n" +
+                "      <publish_date>2001-04-16</publish_date>\n" +
+                "      <description>Microsoft Visual Studio 7 is explored in depth,\n" +
+                "      looking at how Visual Basic, Visual C++, C#, and ASP+ are \n" +
+                "      integrated into a comprehensive development \n" +
+                "      environment.</description>\n" +
+                "   </book>\n" +
+                "</catalog>";
+        Reader reader = new StringReader(xmlStr);
+        JSONObject obj = XML.toJSONObject(reader);
+
+        String expectedOutput ="[Node key : book_sweP\n" +
+                "Node value : [{\"author\":\"Gambardella, Matthew\",\"price\":44.95,\"genre\":\"Computer\",\"description\":\"An in-depth look at creating applications \\n      with XML.\",\"id\":\"bk101\",\"title\":\"XML Developer's Guide\",\"publish_date\":\"2000-10-01\"},{\"author\":\"Ralls, Kim\",\"price\":5.95,\"genre\":\"Fantasy\",\"description\":\"A former architect battles corporate zombies, \\n      an evil sorceress, and her own childhood to become queen \\n      of the world.\",\"id\":\"bk102\",\"title\":\"Midnight Rain\",\"publish_date\":\"2000-12-16\"},{\"author\":\"Corets, Eva\",\"price\":5.95,\"genre\":\"Fantasy\",\"description\":\"After the collapse of a nanotechnology \\n      society in England, the young survivors lay the \\n      foundation for a new society.\",\"id\":\"bk103\",\"title\":\"Maeve Ascendant\",\"publish_date\":\"2000-11-17\"},{\"author\":\"Corets, Eva\",\"price\":5.95,\"genre\":\"Fantasy\",\"description\":\"In post-apocalypse England, the mysterious \\n      agent known only as Oberon helps to create a new life \\n      for the inhabitants of London. Sequel to Maeve \\n      Ascendant.\",\"id\":\"bk104\",\"title\":\"Oberon's Legacy\",\"publish_date\":\"2001-03-10\"},{\"author\":\"Corets, Eva\",\"price\":5.95,\"genre\":\"Fantasy\",\"description\":\"The two daughters of Maeve, half-sisters, \\n      battle one another for control of England. Sequel to \\n      Oberon's Legacy.\",\"id\":\"bk105\",\"title\":\"The Sundered Grail\",\"publish_date\":\"2001-09-10\"},{\"author\":\"Randall, Cynthia\",\"price\":4.95,\"genre\":\"Romance\",\"description\":\"When Carla meets Paul at an ornithology \\n      conference, tempers fly as feathers get ruffled.\",\"id\":\"bk106\",\"title\":\"Lover Birds\",\"publish_date\":\"2000-09-02\"},{\"author\":\"Thurman, Paula\",\"price\":4.95,\"genre\":\"Romance\",\"description\":\"A deep sea diver finds true love twenty \\n      thousand leagues beneath the sea.\",\"id\":\"bk107\",\"title\":\"Splish Splash\",\"publish_date\":\"2000-11-02\"},{\"author\":\"Knorr, Stefan\",\"price\":4.95,\"genre\":\"Horror\",\"description\":\"An anthology of horror stories about roaches,\\n      centipedes, scorpions  and other insects.\",\"id\":\"bk108\",\"title\":\"Creepy Crawlies\",\"publish_date\":\"2000-12-06\"},{\"author\":\"Kress, Peter\",\"price\":6.95,\"genre\":\"Science Fiction\",\"description\":\"After an inadvertant trip through a Heisenberg\\n      Uncertainty Device, James Salway discovers the problems \\n      of being quantum.\",\"id\":\"bk109\",\"title\":\"Paradox Lost\",\"publish_date\":\"2000-11-02\"},{\"author\":\"O'Brien, Tim\",\"price\":36.95,\"genre\":\"Computer\",\"description\":\"Microsoft's .NET initiative is explored in \\n      detail in this deep programmer's reference.\",\"id\":\"bk110\",\"title\":\"Microsoft .NET: The Programming Bible\",\"publish_date\":\"2000-12-09\"},{\"author\":\"O'Brien, Tim\",\"price\":36.95,\"genre\":\"Computer\",\"description\":\"The Microsoft MSXML3 parser is covered in \\n      detail, with attention to XML DOM interfaces, XSLT processing, \\n      SAX and more.\",\"id\":\"bk111\",\"title\":\"MSXML3: A Comprehensive Guide\",\"publish_date\":\"2000-12-01\"},{\"author\":\"Galos, Mike\",\"price\":49.95,\"genre\":\"Computer\",\"description\":\"Microsoft Visual Studio 7 is explored in depth,\\n      looking at how Visual Basic, Visual C++, C#, and ASP+ are \\n      integrated into a comprehensive development \\n      environment.\",\"id\":\"bk112\",\"title\":\"Visual Studio 7: A Comprehensive Guide\",\"publish_date\":\"2001-04-16\"}]\n" +
+                "Node path : /catalog/book\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Gambardella, Matthew\",\"price\":44.95,\"genre\":\"Computer\",\"description\":\"An in-depth look at creating applications \\n      with XML.\",\"id\":\"bk101\",\"title\":\"XML Developer's Guide\",\"publish_date\":\"2000-10-01\"}\n" +
+                "Node path : /catalog/book/0\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Ralls, Kim\",\"price\":5.95,\"genre\":\"Fantasy\",\"description\":\"A former architect battles corporate zombies, \\n      an evil sorceress, and her own childhood to become queen \\n      of the world.\",\"id\":\"bk102\",\"title\":\"Midnight Rain\",\"publish_date\":\"2000-12-16\"}\n" +
+                "Node path : /catalog/book/1\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Corets, Eva\",\"price\":5.95,\"genre\":\"Fantasy\",\"description\":\"After the collapse of a nanotechnology \\n      society in England, the young survivors lay the \\n      foundation for a new society.\",\"id\":\"bk103\",\"title\":\"Maeve Ascendant\",\"publish_date\":\"2000-11-17\"}\n" +
+                "Node path : /catalog/book/2\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Corets, Eva\",\"price\":5.95,\"genre\":\"Fantasy\",\"description\":\"In post-apocalypse England, the mysterious \\n      agent known only as Oberon helps to create a new life \\n      for the inhabitants of London. Sequel to Maeve \\n      Ascendant.\",\"id\":\"bk104\",\"title\":\"Oberon's Legacy\",\"publish_date\":\"2001-03-10\"}\n" +
+                "Node path : /catalog/book/3\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Corets, Eva\",\"price\":5.95,\"genre\":\"Fantasy\",\"description\":\"The two daughters of Maeve, half-sisters, \\n      battle one another for control of England. Sequel to \\n      Oberon's Legacy.\",\"id\":\"bk105\",\"title\":\"The Sundered Grail\",\"publish_date\":\"2001-09-10\"}\n" +
+                "Node path : /catalog/book/4\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Randall, Cynthia\",\"price\":4.95,\"genre\":\"Romance\",\"description\":\"When Carla meets Paul at an ornithology \\n      conference, tempers fly as feathers get ruffled.\",\"id\":\"bk106\",\"title\":\"Lover Birds\",\"publish_date\":\"2000-09-02\"}\n" +
+                "Node path : /catalog/book/5\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Thurman, Paula\",\"price\":4.95,\"genre\":\"Romance\",\"description\":\"A deep sea diver finds true love twenty \\n      thousand leagues beneath the sea.\",\"id\":\"bk107\",\"title\":\"Splish Splash\",\"publish_date\":\"2000-11-02\"}\n" +
+                "Node path : /catalog/book/6\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Knorr, Stefan\",\"price\":4.95,\"genre\":\"Horror\",\"description\":\"An anthology of horror stories about roaches,\\n      centipedes, scorpions  and other insects.\",\"id\":\"bk108\",\"title\":\"Creepy Crawlies\",\"publish_date\":\"2000-12-06\"}\n" +
+                "Node path : /catalog/book/7\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Kress, Peter\",\"price\":6.95,\"genre\":\"Science Fiction\",\"description\":\"After an inadvertant trip through a Heisenberg\\n      Uncertainty Device, James Salway discovers the problems \\n      of being quantum.\",\"id\":\"bk109\",\"title\":\"Paradox Lost\",\"publish_date\":\"2000-11-02\"}\n" +
+                "Node path : /catalog/book/8\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"O'Brien, Tim\",\"price\":36.95,\"genre\":\"Computer\",\"description\":\"Microsoft's .NET initiative is explored in \\n      detail in this deep programmer's reference.\",\"id\":\"bk110\",\"title\":\"Microsoft .NET: The Programming Bible\",\"publish_date\":\"2000-12-09\"}\n" +
+                "Node path : /catalog/book/9\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"O'Brien, Tim\",\"price\":36.95,\"genre\":\"Computer\",\"description\":\"The Microsoft MSXML3 parser is covered in \\n      detail, with attention to XML DOM interfaces, XSLT processing, \\n      SAX and more.\",\"id\":\"bk111\",\"title\":\"MSXML3: A Comprehensive Guide\",\"publish_date\":\"2000-12-01\"}\n" +
+                "Node path : /catalog/book/10\n" +
+                ", Node key : book_sweP\n" +
+                "Node value : {\"author\":\"Galos, Mike\",\"price\":49.95,\"genre\":\"Computer\",\"description\":\"Microsoft Visual Studio 7 is explored in depth,\\n      looking at how Visual Basic, Visual C++, C#, and ASP+ are \\n      integrated into a comprehensive development \\n      environment.\",\"id\":\"bk112\",\"title\":\"Visual Studio 7: A Comprehensive Guide\",\"publish_date\":\"2001-04-16\"}\n" +
+                "Node path : /catalog/book/11\n" +
+                "]";
+        Function<JSONNode, JSONNode> func =x -> {
+            JSONNode modified = new JSONNode(x.getKey()+"_sweP",x.getValue(),x.getPath());
+										return modified;};
+       List<JSONNode> nodes = obj.toStream()
+		.filter(node -> node.getKey().equals("book"))
+		.map(func)
+		.collect(Collectors.toList());
+       assertEquals(expectedOutput,nodes.toString());
+    }
+
+    @Test
+    public void testToStreamReplaceAtPath(){
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);
+        JSONObject obj = XML.toJSONObject(xmlReader);
+
+        JSONObject newObject = new JSONObject();
+		newObject.put("University", "UCI");
+		newObject.put("School", "ICS");
+		newObject.put("Program", "MSWE");
+		newObject.put("Year", 2021);
+
+		AtomicReference<String> resultBefore = new AtomicReference<String>();
+        AtomicReference<String> resultAfter = new AtomicReference<String>();
+		obj.toStream()
+                .forEach(entry -> {
+                            if ((entry.getPath()).equals("/clinical_study/secondary_outcome/0")) {
+                                resultBefore.set(entry.getKey() + ": " + entry.getValue() + "\n");
+                                resultAfter.set(entry.getKey() + ": " + newObject + "\n");
+                            }
+                        }
+                );
+
+        assertNotEquals(resultBefore,resultAfter);
     }
 
 }

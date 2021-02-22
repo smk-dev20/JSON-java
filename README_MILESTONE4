@@ -1,0 +1,110 @@
+MSWE 262P Programming Styles - Milestone 4 Project
+Sherlin Mary Koshy (smkoshy)
+
+REQUIREMENTS :
+* Add streaming methods to the library that allow the client code to chain operations on JSON nodes. For example:
+* // in client space
+* JSONObject obj = XML.toJSONObject("<Books><book><title>AAA</title><author>ASmith</author></book><book><title>BBB</title><author>BSmith</author></book></Books>");
+* obj.toStream().forEach(node -> do some transformation, possibly based on the path of the node);
+* List<String> titles = obj.toStream().map(node -> extract value for key "title").collect(Collectors.toList());
+* obj.toStream().filter(node -> node with certain properties).forEach(node -> do some transformation);
+* These stream operations apply to JSONObject, and are started by transforming those objects into streams with
+* the new toStream() method, that you should write. Given that XML and JSON are hierarchical structures,
+* you need to think about the type of stream you want to support. E.g. top-level elements only, every element independent of nesting, etc. There can be many options. The critical thing here is that, unless the client code explicitly collects the data into an object,
+* the data should simply flow in small parts to the next operation.
+
+MOTIVATION FOR IMPLEMENTATION TECHNIQUE :
+The user of the library provides the XML file to be transformed to JSON, hence the user is aware of the data
+in the file but needs an efficient, easy way to access the data.
+The hierarchical nature of the data in XML and JSON causes related data to be grouped under a single header,
+these groupings often reflect critical information and are typically of type JSONObject and JSONArray.
+For example in the included XML small1.xml the primary data is the book information grouped as a JSONArray under the key "book".
+
+Providing the user easy access to these critical groupings will enhance the library's capabilities.
+JSON.org provides several methods that help in this process specifically JSONPointer but the deeply nested
+structures of some XMLs often means that the generation of the path needed prior to the use of JSONPointer is a tedious process.
+
+The methods and class added as part of this implementation attempts to ease this process for the user by taking
+advantage of the very powerful Java streaming API.
+
+BUILDING THE PROJECT
+- Project can be built using the gradle command
+> gradlew clean build test
+  (Project needs to be launched as a gradle project - refer README_MILESTONE2 for helpful resource on how this can be done)
+- Generated gradle test report includes the 5 added unit test cases for "ToStream" and all tests were reported as passed.
+
+IMPLEMENTATION :
+Implemented code can be utilized as an additional functionality after the JSONObject has been generated from the XML.
+The following code was added :
+- class JSONNode in org.json directory
+- static method toStream() in JSONObject class returns a stream of JSONNodes
+- explore() helper method for toStream() recursively explores the JSON hierarchy to obtain nodes
+- test cases in XMLTest
+- test method in Milestone_Tests
+
+Added class JSONNode acts as a wrapper around each node in the created JSONObject.
+Each object of this class contains the node key, its value and the path to that node.
+
+
+When user calls the toStream() method on the JSON the hierarchy of the JSONObject is recursively explored
+to generate the nodes. All top level nodes are added to the list irrespective of value type.
+In the case of nested JSONObjects - only the enclosing JSONObject is added to the list, and all JSONArray elements
+are added irrespective of type.
+The final list is then streamed to user who can use JAVA streams API to manipulate data as needed.
+
+Consider the example below :
+
+{"catalog": {"book": [
+  {
+    "author": "Gambardella, Matthew",
+    "price": 44.95,
+    "genre": "Computer",
+    "description": "An in-depth look at creating applications \n      with XML.",
+    "id": "bk101",
+    "title": "XML Developer's Guide",
+    "publish_date": "2000-10-01"
+  },
+  {
+    "author": "Ralls, Kim",
+    "price": 5.95,
+    "genre": "Fantasy",
+    "description": "A former architect battles corporate zombies, \n      an evil sorceress, and her own childhood to become queen \n      of the world.",
+    "id": "bk102",
+    "title": "Midnight Rain",
+    "publish_date": "2000-12-16"
+  },
+  "inner-array-key" : "some value"
+  ]
+  },
+  "publisher" : "Random House",
+  "copyright_right_expiry" : "2050"
+  }
+
+"catalog", "publisher" and "copyright_right_expiry" are top level elements and will be added as nodes.
+"book" has value of JSONArray hence all its elements are added including the "inner-array-key".
+The elements at 0th and 1th index of the book array are JSONObjects and therefore added as nodes themselves.
+Both elements will have the same key "book" in Node but their paths will reflect their actual positions within
+book array.
+
+The inner elements of the book object "author", "title" etc. will not be added as nodes.
+This choice was made in order to reduce the space complexity of the node list being formed.
+The user is still provided with sufficient information in the Node streams to retrieve this data if they need to.
+ie., First element in the list will be the entire JSON hierarchy, the whole
+"book" JSONArray is also included as a node, path information to the enclosing JSONObject is also present in the nodes.
+
+The testToStreamFilterAuthors() & testToStreamReplaceAtPath() test cases demonstrate that user still has access
+to information at leaf level.
+
+However, the decision was taken to add leaf elements of JSONArrays (example "inner-array-key") as nodes in order
+to preserve accurate indexing when generating paths to JSONArray elements.
+
+- While providing the user with node information at several levels in the hierarchy is an extremely useful functionality,
+  the primary downside to this implementation is the recursive nature of node discovery and the added space complexity introduced
+  by the node list.
+  In future enhancements we could attempt the creation of nodes at the level of the parser i.e., when XML is being read
+  but the space complexity would still be an issue.
+  One option available would be to reduce the depth to which we explore the nodes, i.e., stream only top-level elements.
+  This trade-off would mean that the burden of the node exploration is on the side of the user application.
+
+On the whole the current implementation providing node data several levels deep along with the additional compute of
+path information significantly improves this library's capabilities.

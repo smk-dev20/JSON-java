@@ -36,16 +36,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.ResourceBundle;
-import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * A JSONObject is an unordered collection of name/value pairs. Its external
@@ -1627,7 +1621,7 @@ public class JSONObject {
      * implementations and interfaces has the annotation. Returns the depth of the
      * annotation in the hierarchy.
      *
-     * @param <A>
+     * @param <>
      *            type of the annotation
      *
      * @param m
@@ -2645,4 +2639,106 @@ public class JSONObject {
                 "JSONObject[" + quote(key) + "] is not a " + valueType + " (" + value + ")."
                 , cause);
     }
-}
+
+    /**
+     * Method recursively explores the input JSONObject creates JSONNodes and adds to list,
+     * method is called for nested JSONObjects/JSONArrays hence terminal leaves will not be
+     * added to the JSONNode list unless they were contained in a JSONArray
+     * Value of path reset at the end of every recursive call for accuracy
+     * @param obj - JSONObject to recursively explore
+     * @param path - path to current object
+     * @param nodeList - list of JSONNodes built thus far from main JSONObject
+     */
+    private static void explore(JSONObject obj, String path, List<JSONNode> nodeList){
+        JSONNode node = null;
+        String prevPath = path;
+
+        for(String key : obj.keySet()) {
+
+            Object value = obj.get(key);
+
+            if(value instanceof JSONObject) {
+                path += "/"+key;
+
+                node = new JSONNode(key,value,path);
+                nodeList.add(node);
+
+                explore((JSONObject)value, path, nodeList);
+                path = prevPath;
+            }else if(value instanceof JSONArray) {
+                path += "/"+key;
+                node = new JSONNode(key,value,path);
+                nodeList.add(node);
+
+                JSONArray array = (JSONArray) value;
+
+                for (int i = 0; i < array.length(); i++) {
+                    String lastKey = path.substring(path.lastIndexOf("/")+1,path.length());
+                    if(lastKey.matches("-?\\d+(.\\d+)?")) {
+                        path = path.substring(0,path.lastIndexOf("/"));
+                    }
+                    path+="/"+i;
+                    node = new JSONNode(key,array.get(i),path);
+                    nodeList.add(node);
+
+                    if(array.get(i) instanceof JSONObject)
+                        explore(array.getJSONObject(i), path, nodeList);
+                }
+                path = prevPath;
+            }else {
+                //do nothing terminal leaf level of inner objects are not added
+            }
+        }
+    }//end explore
+
+    /**
+     * Method creates JSONNode object for every key-value pair in top-level structure of the JSONObject
+     * append node to list for later streaming
+     * explore nested JSONObjects and JSONArrays
+     * reset value of path at the end of every recursive call for path accuracy
+     * @return Stream of JSONNodes built from JSONObject
+     */
+    public Stream<JSONNode> toStream(){
+        List<JSONNode> nodeList = new LinkedList<>();
+        JSONNode node = null;
+
+        for(String key : this.keySet()) {
+
+            String path = "/"+key;
+            String prevPath = "";
+            Object value = this.get(key);
+            prevPath = path;
+
+            node = new JSONNode(key,value,path);
+            nodeList.add(node);
+
+            if(value instanceof JSONArray) {
+                JSONArray array = (JSONArray) value;
+
+                for (int i = 0; i < array.length(); i++) {
+                    String lastKey = path.substring(path.lastIndexOf("/")+1,path.length());
+                    if(lastKey.matches("-?\\d+(.\\d+)?")) {
+                        path = path.substring(0,path.lastIndexOf("/"));
+                    }
+                    path+="/"+i;
+
+                    node = new JSONNode(key,array.get(i),path);
+                    nodeList.add(node);
+                    if(array.get(i) instanceof JSONObject)
+                        explore(array.getJSONObject(i), path, nodeList);
+                }
+                path = prevPath;
+            }else if(value instanceof JSONObject) {
+                explore((JSONObject)value, path, nodeList);
+                path = prevPath;
+            }else {
+                //do nothing leaf level was already added to node list
+            }
+        }//end for keySet
+
+        return nodeList.stream();
+    }
+
+
+
+}//end class JSONObject
