@@ -1,0 +1,35 @@
+MSWE 262P Programming Styles - Milestone 5 Project
+Sherlin Mary Koshy (smkoshy)
+
+REQUIREMENTS :
+Add asynchronous methods to the library that allow the client code to proceed.
+This is useful for when reading very large files.
+
+
+IMPLEMENTATION :
+The following code was added
+- Static class JSONFuture within XML.java
+- Static methods toJSONObjectAsync(Reader reader) and toJSONObjectAsync(Reader reader, Function keyTransformer)
+  that return a Future object of type JSON.
+- Test cases for the above methods in XML.test
+- Sample tests in MileStone_Tests
+
+* The added "Async" methods when called by client code will instantiate the JSONFuture class.
+* The instantiation spawns a new thread created using ExecutorService and this new thread will handle the responsibility
+  of XML to JSON conversion, allowing the main client thread to continue.
+* Async method returns a Future object to the client code, i.e., An object that will "in the future" be the needed
+  JSONObject and gracefully shuts down the spawned thread when its work is complete.
+* The fact that a new thread is spawned/needs shut down etc is abstracted away from the client code.
+* Client is only aware that the method called is Asynchronous and that the Java Future APIs methods can be used.
+* Client code can then use JAVA Future API's methods to handle other tasks while the XML to JSON conversion is in progress.
+* Returning a future object to the client gives the client more control over what needs to be done during the wait process.
+  For example client could set up the file to which it will write the obtained JSONObject or prepare other code that will manipulate
+  the returned JSONObject etc., there could be many possibilities.
+
+BUILDING THE PROJECT
+- Project can be built using the gradle command
+> gradlew clean build test
+  (Project needs to be launched as a gradle project - refer README_MILESTONE2 for helpful resource on how this can be done)
+- Generated gradle test report includes the 5 added unit test cases for "Async" methods and all tests were reported as passed.
+
+

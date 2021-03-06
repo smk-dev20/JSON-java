@@ -31,8 +31,10 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Function;
-
 
 /**
  * This provides static methods to convert an XML text into a JSONObject, and to
@@ -43,6 +45,35 @@ import java.util.function.Function;
  */
 @SuppressWarnings("boxing")
 public class XML {
+
+    /**
+        Class utilized for the asynchronous toJSONObject method
+        New thread created using executor service to perform actual XML to JSON conversion
+        Future JSONObject returned on completion
+        Additional method for graceful shutdown of spawned thread
+     */
+    static class JSONFuture {
+        private ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        public Future<JSONObject> toJSONObject(Reader reader, XMLParserConfiguration config) {
+            return executor.submit(() -> {
+                return XML.toJSONObject(reader,config);
+            });
+        }//end toJSONObject
+
+        public Future<JSONObject> toJSONObject(Reader reader, Function keyTransformer){
+            return executor.submit(() -> {
+                return XML.toJSONObject(reader,keyTransformer);
+            });
+        }
+
+        //gracefully shuts down the executor service, currently running tasks will be allowed to complete
+        public void stopFuture() {
+            executor.shutdown();
+        }//end stopFuture
+
+    }//end inner class JSONFuture
+
 
     /**
      * The Character '&amp;'.
@@ -1421,6 +1452,44 @@ public class XML {
 
         return jo;
     }
+
+    /**
+     * Methods calls the JSONFuture class causing the XML-JSON conversion to be handed off to another thread
+     * The Future object returned allows client code to continue and perform some useful task.
+     * @param reader
+     * @return Future
+     * @throws InterruptedException
+     */
+    public static Future<JSONObject> toJSONObjectAsync(Reader reader) throws InterruptedException {
+        JSONFuture future = new JSONFuture();
+        Future<JSONObject> futureObject = future.toJSONObject(reader, XMLParserConfiguration.ORIGINAL);
+
+        //initiate the call to shutdown thread when it finishes
+        future.stopFuture();
+
+        return futureObject;
+
+    }//end toJSONObjectAsync(reader)
+
+    /**
+     * Method hands over XML-JSON conversion with key transform function to new thread in JSONFuture class
+     * Gracefully shuts down the new thread
+     * Returns Future object to client
+     * @param reader
+     * @param keyTransformer
+     * @return Future
+     * @throws InterruptedException
+     */
+    public static Future<JSONObject> toJSONObjectAsync(Reader reader, Function keyTransformer) throws InterruptedException {
+        JSONFuture future = new JSONFuture();
+        Future<JSONObject> futureObject = future.toJSONObject(reader, keyTransformer);
+
+        //initiate the call shutdown thread when it finishes
+        future.stopFuture();
+
+        return futureObject;
+
+    }//end toJSONObjectAsync(reader, keyTransformer)
 
     /**
      * Convert a well-formed (but not necessarily valid) XML string into a

@@ -24,17 +24,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringReader;
+import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -2784,4 +2778,149 @@ public class XMLTest {
         assertNotEquals(resultBefore,resultAfter);
     }
 
-}
+    @Test
+
+    public void testToJSONObjectAsyncReturnsFuture(){
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);;
+
+        try {
+            assertTrue(XML.toJSONObjectAsync(xmlReader) instanceof Future);
+            Future<JSONObject> futureObject = XML.toJSONObjectAsync(xmlReader);
+            assertNotNull(futureObject);
+            String expectedClass = "class java.util.concurrent.FutureTask";
+
+            assertTrue(futureObject.getClass().toString().equals(expectedClass));
+            assertEquals(expectedClass,futureObject.getClass().toString());
+        }catch(Exception e){
+            fail("There should not be an exception");
+        }
+    }
+
+    @Test
+    public void testToJSONObjectAsyncAllowsClientToProceed(){
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);;
+
+        try {
+            int count=0;
+            Future<JSONObject> futureObject = XML.toJSONObjectAsync(xmlReader);
+
+            while(!futureObject.isDone()) {
+                count++;
+                Thread.sleep(2);
+            }
+            assertTrue(count>0);
+            }catch(Exception e){
+            fail("There should not be an exception");
+        }
+    }
+
+    @Test
+    public void testToJSONObjectAsyncReturnsJSONObject(){
+        InputStream xmlStream = XMLTest.class.getClassLoader().getResourceAsStream("Issue537.xml");
+        Reader xmlReader = new InputStreamReader(xmlStream);;
+
+        try {
+            Future<JSONObject> futureObject = XML.toJSONObjectAsync(xmlReader);
+            int count = 0;
+            while(!futureObject.isDone()) {
+                count++;
+                Thread.sleep(500);
+            }
+            assertTrue(count>0);
+            JSONObject obj = futureObject.get();
+            assertNotNull(obj);
+            assertTrue(obj instanceof JSONObject);
+        }catch(Exception e){
+            fail("There should not be an exception");
+        }
+    }
+
+    @Test
+    public void testToJSONObjecAsynctIsCorrect(){
+        String xmlStr =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"+
+                        "<addresses xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""+
+                        "   xsi:noNamespaceSchemaLocation='test.xsd'>\n"+
+                        "   <address>\n"+
+                        "       <name>Joe Tester</name>\n"+
+                        "       <street>[CDATA[Baker street 5]</street>\n"+
+                        "       <NothingHere/>\n"+
+                        "       <TrueValue>true</TrueValue>\n"+
+                        "       <FalseValue>false</FalseValue>\n"+
+                        "       <NullValue>null</NullValue>\n"+
+                        "       <PositiveValue>42</PositiveValue>\n"+
+                        "       <NegativeValue>-23</NegativeValue>\n"+
+                        "       <DoubleValue>-23.45</DoubleValue>\n"+
+                        "       <Nan>-23x.45</Nan>\n"+
+                        "       <ArrayOfNum>1, 2, 3, 4.1, 5.2</ArrayOfNum>\n"+
+                        "   </address>\n"+
+                        "</addresses>";
+        Reader reader = new StringReader(xmlStr);
+
+        String expectedJsonString = "{\"addresses\":{\"address\":{\"ArrayOfNum\":\"1, 2, 3, 4.1, 5.2\",\"NullValue\":null,\"TrueValue\":true,\"DoubleValue\":-23.45,\"street\":\"[CDATA[Baker street 5]\",\"NegativeValue\":-23,\"name\":\"Joe Tester\",\"NothingHere\":\"\",\"Nan\":\"-23x.45\",\"PositiveValue\":42,\"FalseValue\":false},\"xsi:noNamespaceSchemaLocation\":\"test.xsd\",\"xmlns:xsi\":\"http://www.w3.org/2001/XMLSchema-instance\"}}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+
+        try {
+            Future<JSONObject> futureObject = XML.toJSONObjectAsync(reader);
+            int count = 0;
+            while(!futureObject.isDone()) {
+                count++;
+                Thread.sleep(500);
+            }
+            assertTrue(count>0);
+            JSONObject actualObj = futureObject.get();
+            assertNotNull(actualObj);
+            assertTrue(actualObj instanceof JSONObject);
+            Util.compareActualVsExpectedJsonObjects(actualObj,expectedJson);
+        }catch(Exception e){
+            fail("There should not be an exception");
+        }
+    }
+
+    @Test
+    public void testToJSONObjectAsyncKeyTransform(){
+        String xmlStr =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"+
+                        "<addresses xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\""+
+                        "   xsi:noNamespaceSchemaLocation='test.xsd'>\n"+
+                        "   <address>\n"+
+                        "       <name>Joe Tester</name>\n"+
+                        "       <street>[CDATA[Baker street 5]</street>\n"+
+                        "       <NothingHere/>\n"+
+                        "       <TrueValue>true</TrueValue>\n"+
+                        "       <FalseValue>false</FalseValue>\n"+
+                        "       <NullValue>null</NullValue>\n"+
+                        "       <PositiveValue>42</PositiveValue>\n"+
+                        "       <NegativeValue>-23</NegativeValue>\n"+
+                        "       <DoubleValue>-23.45</DoubleValue>\n"+
+                        "       <Nan>-23x.45</Nan>\n"+
+                        "       <ArrayOfNum>1, 2, 3, 4.1, 5.2</ArrayOfNum>\n"+
+                        "   </address>\n"+
+                        "</addresses>";
+        Reader reader = new StringReader(xmlStr);
+        Function<String, String> func = x -> "swe_262P_"+x;
+
+        String expectedJsonString = "{\"swe_262P_addresses\":{\"swe_262P_xsi:noNamespaceSchemaLocation\":\"test.xsd\",\"swe_262P_address\":{\"swe_262P_Nan\":\"-23x.45\",\"swe_262P_street\":\"[CDATA[Baker street 5]\",\"swe_262P_FalseValue\":false,\"swe_262P_ArrayOfNum\":\"1, 2, 3, 4.1, 5.2\",\"swe_262P_NothingHere\":\"\",\"swe_262P_NegativeValue\":-23,\"swe_262P_DoubleValue\":-23.45,\"swe_262P_TrueValue\":true,\"swe_262P_name\":\"Joe Tester\",\"swe_262P_NullValue\":null,\"swe_262P_PositiveValue\":42},\"swe_262P_xmlns:xsi\":\"http://www.w3.org/2001/XMLSchema-instance\"}}";
+        JSONObject expectedJson = new JSONObject(expectedJsonString);
+
+        try {
+            Future<JSONObject> futureObject = XML.toJSONObjectAsync(reader,func);
+            int count = 0;
+            while(!futureObject.isDone()) {
+                count++;
+                Thread.sleep(500);
+            }
+            assertTrue(count>0);
+            JSONObject actualObj = futureObject.get();
+            System.out.println(actualObj);
+            assertNotNull(actualObj);
+            assertTrue(actualObj instanceof JSONObject);
+            Util.compareActualVsExpectedJsonObjects(actualObj,expectedJson);
+        }catch(Exception e){
+            fail("There should not be an exception");
+        }
+    }
+
+}//end XMLTest class
