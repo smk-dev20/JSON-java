@@ -2807,6 +2807,7 @@ public class XMLTest {
             Future<JSONObject> futureObject = XML.toJSONObjectAsync(xmlReader);
 
             while(!futureObject.isDone()) {
+                //counter increment to simulate some user action while waiting for JSON
                 count++;
                 Thread.sleep(2);
             }
